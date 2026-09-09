@@ -1,0 +1,990 @@
+<!DOCTYPE html>
+<html lang="sq">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>StudyFlow</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+        rel="stylesheet"
+    >
+
+    <link
+        rel="stylesheet"
+        href="style.css"
+    >
+
+</head>
+
+
+<body>
+
+
+<!-- ============================
+     LOGIN SCREEN
+============================= -->
+
+<div
+    class="auth-screen"
+    id="authScreen"
+>
+
+    <div class="auth-card">
+
+        <div class="brand">
+            STUDYFLOW
+        </div>
+
+        <h1>
+            Mëso më mirë.
+        </h1>
+
+        <p>
+            Plani yt personal i mësimit,
+            i krijuar me AI.
+        </p>
+
+
+        <!-- LOGIN -->
+
+        <form id="loginForm">
+
+            <div class="field">
+
+                <label>Email</label>
+
+                <input
+                    type="email"
+                    id="loginEmail"
+                    placeholder="email@example.com"
+                    required
+                >
+
+            </div>
+
+
+            <div class="field">
+
+                <label>Password</label>
+
+                <input
+                    type="password"
+                    id="loginPassword"
+                    placeholder="••••••••"
+                    minlength="6"
+                    required
+                >
+
+            </div>
+
+
+            <button
+                class="primary-button"
+                type="submit"
+            >
+                Hyr
+            </button>
+
+        </form>
+
+
+        <p
+            class="auth-switch"
+            id="showRegister"
+        >
+            Nuk ke llogari?
+            <strong>Regjistrohu</strong>
+        </p>
+
+
+        <!-- REGISTER -->
+
+        <form
+            id="registerForm"
+            class="hidden"
+        >
+
+            <div class="field">
+
+                <label>Emri</label>
+
+                <input
+                    type="text"
+                    id="registerName"
+                    maxlength="50"
+                    required
+                >
+
+            </div>
+
+
+            <div class="field">
+
+                <label>Email</label>
+
+                <input
+                    type="email"
+                    id="registerEmail"
+                    required
+                >
+
+            </div>
+
+
+            <div class="field">
+
+                <label>Password</label>
+
+                <input
+                    type="password"
+                    id="registerPassword"
+                    minlength="6"
+                    required
+                >
+
+            </div>
+
+
+            <div class="field">
+
+                <label>Niveli shkollor</label>
+
+                <select
+                    id="registerEducation"
+                    required
+                >
+
+                    <option value="">
+                        Zgjidh
+                    </option>
+
+                    <option value="elementary">
+                        Shkollë fillore
+                    </option>
+
+                    <option value="highschool">
+                        Shkollë e mesme
+                    </option>
+
+                    <option value="university">
+                        Universitet
+                    </option>
+
+                    <option value="other">
+                        Tjetër
+                    </option>
+
+                </select>
+
+            </div>
+
+
+            <div class="field">
+
+                <label>
+                    Shkolla / Klasa / Drejtimi
+                </label>
+
+                <input
+                    type="text"
+                    id="registerSchool"
+                    maxlength="100"
+                >
+
+            </div>
+
+
+            <button
+                class="primary-button"
+                type="submit"
+            >
+                Krijo llogarinë
+            </button>
+
+        </form>
+
+
+        <p
+            class="auth-switch hidden"
+            id="showLogin"
+        >
+            Ke llogari?
+            <strong>Hyr</strong>
+        </p>
+
+
+        <div
+            class="auth-error"
+            id="authError"
+        ></div>
+
+    </div>
+
+</div>
+
+
+
+<!-- ============================
+     APP
+============================= -->
+
+<div
+    class="app hidden"
+    id="app"
+>
+
+
+    <!-- SIDEBAR -->
+
+    <aside class="sidebar">
+
+        <div class="sidebar-logo">
+            STUDYFLOW
+        </div>
+
+
+        <nav>
+
+            <button
+                class="nav-item active"
+                data-page="dashboard"
+            >
+                <span>⌂</span>
+                Dashboard
+            </button>
+
+
+            <button
+                class="nav-item"
+                data-page="planner"
+            >
+                <span>＋</span>
+                Krijo plan
+            </button>
+
+
+            <button
+                class="nav-item"
+                data-page="plans"
+            >
+                <span>▤</span>
+                Planet
+            </button>
+
+
+            <button
+                class="nav-item"
+                data-page="profile"
+            >
+                <span>○</span>
+                Profili
+            </button>
+
+        </nav>
+
+
+        <button
+            class="logout-button"
+            id="logoutButton"
+        >
+            Dil nga llogaria
+        </button>
+
+    </aside>
+
+
+
+    <!-- MAIN -->
+
+    <main class="main-content">
+
+
+        <!-- TOPBAR -->
+
+        <header class="topbar">
+
+            <div>
+
+                <span class="eyebrow">
+                    STUDYFLOW
+                </span>
+
+                <h2 id="pageTitle">
+                    Dashboard
+                </h2>
+
+            </div>
+
+
+            <div class="user-chip">
+
+                <div
+                    class="avatar"
+                    id="userAvatar"
+                >
+                    U
+                </div>
+
+                <span id="userName">
+                    User
+                </span>
+
+            </div>
+
+        </header>
+
+
+
+        <!-- =====================
+             DASHBOARD
+        ====================== -->
+
+        <section
+            class="page active"
+            id="dashboardPage"
+        >
+
+            <div class="welcome">
+
+                <div>
+
+                    <span class="eyebrow">
+                        MIRËSEVJEN
+                    </span>
+
+                    <h1>
+                        Gati për të mësuar,
+                        <span id="welcomeName">
+                            User
+                        </span>?
+                    </h1>
+
+                    <p>
+                        Krijo një plan dhe lëre AI-n
+                        ta organizojë pjesën tjetër.
+                    </p>
+
+                </div>
+
+
+                <button
+                    class="primary-button"
+                    id="dashboardCreate"
+                >
+                    Krijo plan
+                </button>
+
+            </div>
+
+
+            <!-- TODAY -->
+
+            <div class="today-grid" id="todayGrid">
+
+                <div class="panel today-panel">
+
+                    <h3>Sot</h3>
+                    <div id="todaySessions" class="today-sessions"></div>
+
+                </div>
+
+                <div class="panel next-panel">
+
+                    <h3>Sesioni tjetër</h3>
+                    <div id="nextSession" class="next-session-box"></div>
+
+                </div>
+
+            </div>
+
+
+            <!-- PLAN HEALTH -->
+
+            <div class="panel plan-health hidden" id="planHealthPanel">
+
+                <div>
+                    <h3>Gjendja e planit aktiv</h3>
+                    <p id="planHealthText"></p>
+                </div>
+
+                <button class="ghost-button" id="adjustPlanButton">
+                    Rregullo planin
+                </button>
+
+            </div>
+
+
+            <!-- STATS -->
+
+            <div class="stats-grid">
+
+                <div class="stat-card">
+                    <span>Planet</span>
+                    <strong id="totalPlans">0</strong>
+                </div>
+
+                <div class="stat-card">
+                    <span>Sesione të kryera</span>
+                    <strong id="completedSessions">0</strong>
+                </div>
+
+                <div class="stat-card">
+                    <span>Sesione të humbura</span>
+                    <strong id="missedSessions">0</strong>
+                </div>
+
+                <div class="stat-card">
+                    <span>Orë mësimi</span>
+                    <strong id="totalHours">0</strong>
+                </div>
+
+                <div class="stat-card">
+                    <span>Vazhdimësi (streak)</span>
+                    <strong id="studyStreak">0</strong>
+                </div>
+
+            </div>
+
+
+
+            <!-- UPCOMING -->
+
+            <div class="section-heading">
+
+                <div>
+
+                    <span class="eyebrow">
+                        AKTIVITETI
+                    </span>
+
+                    <h2>
+                        Planet e fundit
+                    </h2>
+
+                </div>
+
+            </div>
+
+
+            <div
+                class="plans-list"
+                id="recentPlans"
+            >
+
+                <div class="empty-state">
+
+                    <h3>
+                        Ende nuk ke plane
+                    </h3>
+
+                    <p>
+                        Krijo planin tënd të parë
+                        me AI.
+                    </p>
+
+                </div>
+
+            </div>
+
+        </section>
+
+
+
+        <!-- =====================
+             PLANNER
+        ====================== -->
+
+        <section
+            class="page"
+            id="plannerPage"
+        >
+
+            <div class="page-intro">
+
+                <span class="eyebrow">
+                    AI PLANNER
+                </span>
+
+                <h1>
+                    Krijo plan të ri
+                </h1>
+
+                <p>
+                    Përshkruaje situatën tënde me fjalët e tua,
+                    ose plotëso formularin - AI do ta kuptojë
+                    jetën tënde reale dhe do ndërtojë një orar
+                    që mund ta ndjekësh.
+                </p>
+
+            </div>
+
+
+            <!-- MODE TOGGLE -->
+
+            <div class="mode-toggle">
+
+                <button
+                    type="button"
+                    class="mode-toggle-btn active"
+                    id="modeToggleAi"
+                    data-mode="ai"
+                >
+                    ✦ Përshkrim natyror
+                </button>
+
+                <button
+                    type="button"
+                    class="mode-toggle-btn"
+                    id="modeToggleForm"
+                    data-mode="form"
+                >
+                    ▤ Formular i udhëhequr
+                </button>
+
+            </div>
+
+
+            <!-- =====================
+                 AI NATURAL LANGUAGE MODE
+            ====================== -->
+
+            <div class="mode-panel active" id="modeAi">
+
+                <div class="panel nl-panel">
+
+                    <h3>Tregoji StudyFlow çfarë të duhet</h3>
+
+                    <p>
+                        Shkruaj natyrshëm: lëndën, datat,
+                        orarin e punës/shkollës, kur je i lirë,
+                        çfarë dëshiron të arrish. Shqip, anglisht,
+                        ose çdo dialekt - AI e kupton.
+                    </p>
+
+                    <textarea
+                        id="nlInput"
+                        rows="6"
+                        maxlength="2000"
+                        placeholder="Prej 25 gushtit deri 15 shtator du me msu JavaScript. Jam i lirë 8-10 në mëngjes, pastaj punoj deri në 18:00. Kur vi në shpi du 1 orë pushim dhe darkë. Mundem me msu edhe 1 orë në mbrëmje. Të dielën nuk du me msu."
+                    ></textarea>
+
+                    <button
+                        class="primary-button large"
+                        type="button"
+                        id="parseButton"
+                    >
+                        <span id="parseButtonText">Krijo planin</span>
+                        <span>→</span>
+                    </button>
+
+                    <div class="ai-error hidden" id="nlError"></div>
+
+                </div>
+
+
+                <!-- CLARIFYING QUESTIONS -->
+
+                <div class="panel hidden" id="clarifyPanel">
+
+                    <h3>Më duhen disa sqarime</h3>
+
+                    <p>Shto këto detaje te përshkrimi yt lart dhe provo përsëri:</p>
+
+                    <ul class="clarify-list" id="clarifyList"></ul>
+
+                </div>
+
+
+                <!-- CONFIRMATION -->
+
+                <div class="panel hidden" id="confirmPanel">
+
+                    <h3>Ja çka kuptova</h3>
+
+                    <p>Kontrollo dhe rregullo nëse diçka nuk është saktë, pastaj konfirmo.</p>
+
+                    <div class="confirm-grid">
+
+                        <div class="field">
+                            <label>Lënda</label>
+                            <input type="text" id="confirmSubject" maxlength="120">
+                        </div>
+
+                        <div class="field">
+                            <label>Qëllimi i planit</label>
+                            <select id="confirmPlanMode">
+                                <option value="general">I përgjithshëm</option>
+                                <option value="exam">Provim</option>
+                                <option value="new_subject">Lëndë e re</option>
+                                <option value="project">Projekt</option>
+                                <option value="assignment">Detyrë</option>
+                                <option value="certification">Certifikim</option>
+                                <option value="skill">Zhvillim aftësie</option>
+                                <option value="revision">Përsëritje</option>
+                            </select>
+                        </div>
+
+                        <div class="field">
+                            <label>Data e fillimit</label>
+                            <input type="date" id="confirmStartDate">
+                        </div>
+
+                        <div class="field">
+                            <label>Data e mbarimit</label>
+                            <input type="date" id="confirmEndDate">
+                        </div>
+
+                        <div class="field">
+                            <label>Vështirësia</label>
+                            <select id="confirmDifficulty">
+                                <option value="easy">E lehtë</option>
+                                <option value="medium" selected>Mesatare</option>
+                                <option value="hard">E vështirë</option>
+                            </select>
+                        </div>
+
+                        <div class="field">
+                            <label>Kohëzgjatja e preferuar e seancës (min)</label>
+                            <input type="number" id="confirmSessionLength" min="15" max="180" step="5" placeholder="p.sh. 60">
+                        </div>
+
+                    </div>
+
+                    <div class="field">
+                        <label>Materiali / qëllimi konkret</label>
+                        <input type="text" id="confirmGoal" maxlength="300" placeholder="p.sh. Kuptimi i bazave, jo vetëm mbarimi i temave">
+                    </div>
+
+                    <div class="confirm-summary" id="confirmSummary"></div>
+
+                    <div class="confirm-actions">
+
+                        <button class="primary-button large" type="button" id="confirmCreateButton">
+                            <span id="confirmCreateText">Konfirmo planin</span>
+                            <span>→</span>
+                        </button>
+
+                        <button class="ghost-button" type="button" id="confirmBackButton">
+                            Rishkruaj përshkrimin
+                        </button>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+
+            <!-- =====================
+                 GUIDED FORM MODE
+            ====================== -->
+
+            <div class="mode-panel" id="modeForm">
+
+                <form id="plannerForm">
+
+                    <div class="planner-grid">
+
+                        <div class="panel">
+
+                            <h3>Lënda dhe qëllimi</h3>
+
+                            <div class="field">
+                                <label>Lënda</label>
+                                <input type="text" id="f_subject" maxlength="120" placeholder="p.sh. Matematikë" required>
+                            </div>
+
+                            <div class="field">
+                                <label>Materiali / qëllimi konkret</label>
+                                <input type="text" id="f_material" maxlength="200" placeholder="p.sh. Kapitujt 3-5, algjebra">
+                            </div>
+
+                            <div class="two-columns">
+
+                                <div class="field">
+                                    <label>Lloji i planit</label>
+                                    <select id="f_planMode" required>
+                                        <option value="general">I përgjithshëm</option>
+                                        <option value="exam">Provim</option>
+                                        <option value="new_subject">Lëndë e re</option>
+                                        <option value="project">Projekt</option>
+                                        <option value="assignment">Detyrë</option>
+                                        <option value="certification">Certifikim</option>
+                                        <option value="skill">Zhvillim aftësie</option>
+                                        <option value="revision">Përsëritje</option>
+                                    </select>
+                                </div>
+
+                                <div class="field">
+                                    <label>Vështirësia</label>
+                                    <select id="f_difficulty" required>
+                                        <option value="easy">E lehtë</option>
+                                        <option value="medium" selected>Mesatare</option>
+                                        <option value="hard">E vështirë</option>
+                                    </select>
+                                </div>
+
+                            </div>
+
+                        </div>
+
+
+                        <div class="panel">
+
+                            <h3>Periudha</h3>
+
+                            <div class="two-columns">
+
+                                <div class="field">
+                                    <label>Data e fillimit</label>
+                                    <input type="date" id="f_startDate" required>
+                                </div>
+
+                                <div class="field">
+                                    <label>Data e mbarimit</label>
+                                    <input type="date" id="f_endDate" required>
+                                </div>
+
+                            </div>
+
+                            <div class="field">
+                                <label>Kohëzgjatja e preferuar e seancës (minuta)</label>
+                                <input type="number" id="f_sessionLength" min="15" max="180" step="5" placeholder="p.sh. 60">
+                            </div>
+
+                            <h3 class="panel-subheading">Energjia</h3>
+
+                            <div class="three-columns">
+
+                                <div class="field">
+                                    <label>Mëngjes</label>
+                                    <select id="f_energyMorning">
+                                        <option value="">—</option>
+                                        <option value="high">E lartë</option>
+                                        <option value="medium">Mesatare</option>
+                                        <option value="low">E ulët</option>
+                                    </select>
+                                </div>
+
+                                <div class="field">
+                                    <label>Pasdite</label>
+                                    <select id="f_energyAfternoon">
+                                        <option value="">—</option>
+                                        <option value="high">E lartë</option>
+                                        <option value="medium">Mesatare</option>
+                                        <option value="low">E ulët</option>
+                                    </select>
+                                </div>
+
+                                <div class="field">
+                                    <label>Mbrëmje</label>
+                                    <select id="f_energyEvening">
+                                        <option value="">—</option>
+                                        <option value="high">E lartë</option>
+                                        <option value="medium">Mesatare</option>
+                                        <option value="low">E ulët</option>
+                                    </select>
+                                </div>
+
+                            </div>
+
+                        </div>
+
+
+                        <div class="panel panel-wide">
+
+                            <h3>Disponueshmëria javore</h3>
+
+                            <p>Për çdo ditë, shëno dritaret kur je i/e lirë për të studiuar (p.sh. <code>08:00-10:00, 20:00-21:30</code>). Lëri bosh dhe shëno "off" nëse nuk studion atë ditë.</p>
+
+                            <div class="availability-grid" id="availabilityGrid"></div>
+
+                        </div>
+
+
+                        <div class="panel panel-wide">
+
+                            <h3>Angazhimet (punë, shkollë, gjumë, ushqim...)</h3>
+
+                            <p>Shto çdo bllok kohe të zënë - AI nuk do të planifikojë studim mbi to.</p>
+
+                            <div id="commitmentsList"></div>
+
+                            <button type="button" class="ghost-button" id="addCommitmentButton">
+                                + Shto angazhim
+                            </button>
+
+                        </div>
+
+                    </div>
+
+
+                    <button
+                        class="primary-button large"
+                        type="submit"
+                        id="createPlanButton"
+                    >
+                        <span id="createPlanText">
+                            Krijo plan me AI
+                        </span>
+
+                        <span>
+                            →
+                        </span>
+                    </button>
+
+                </form>
+
+            </div>
+
+
+            <!-- AI RESULT -->
+
+            <div
+                class="ai-result hidden"
+                id="aiResult"
+            >
+
+                <div class="result-top">
+
+                    <div>
+                        <span class="eyebrow">PLANI U KRIJUA</span>
+                        <h2 id="resultSubjectTitle">Orari yt</h2>
+                    </div>
+
+                    <div class="result-stats" id="resultStats"></div>
+
+                </div>
+
+                <div class="strategy-box" id="strategyBox"></div>
+
+                <div class="warnings-box hidden" id="warningsBox"></div>
+
+                <div
+                    class="schedule"
+                    id="schedule"
+                ></div>
+
+            </div>
+
+        </section>
+
+
+
+        <!-- =====================
+             PLANS
+        ====================== -->
+
+        <section
+            class="page"
+            id="plansPage"
+        >
+
+            <div class="page-intro">
+
+                <span class="eyebrow">
+                    HISTORIA
+                </span>
+
+                <h1>
+                    Planet e tua
+                </h1>
+
+                <p>
+                    Të gjitha planet që ke krijuar.
+                </p>
+
+            </div>
+
+
+            <div
+                class="plans-list"
+                id="allPlans"
+            ></div>
+
+        </section>
+
+
+
+        <!-- =====================
+             PROFILE
+        ====================== -->
+
+        <section
+            class="page"
+            id="profilePage"
+        >
+
+            <div class="page-intro">
+
+                <span class="eyebrow">
+                    PROFILI
+                </span>
+
+                <h1>
+                    Profili yt
+                </h1>
+
+                <p>
+                    Të dhënat që AI përdor për
+                    personalizimin e planeve.
+                </p>
+
+            </div>
+
+
+            <div class="profile-card">
+
+                <div class="profile-avatar"
+                     id="profileAvatar">
+                    U
+                </div>
+
+
+                <div class="profile-info">
+
+                    <h2 id="profileName">
+                        User
+                    </h2>
+
+                    <p id="profileEmail">
+                        email
+                    </p>
+
+                    <div class="profile-details">
+
+                        <span id="profileEducation">
+                            —
+                        </span>
+
+                        <span id="profileSchool">
+                            —
+                        </span>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </section>
+
+    </main>
+
+</div>
+
+
+<script src="script.js"></script>
+
+</body>
+</html>
