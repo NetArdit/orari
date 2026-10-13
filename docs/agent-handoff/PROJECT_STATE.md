@@ -28,10 +28,10 @@ Batch 0 ACCEPTED WITH CONDITIONS by Codex. Batch 1 (safety net) delivered, await
 - Two static visual directions for the owner to choose from, before broad client UI.
 
 ## Verification available
-`npm test`: 84 tests (node:test, no dependencies), 17 of them pin known defects by name. `npm run check`: syntax. `npm audit`: 0 vulnerabilities. Browser baseline script: `docs/agent-handoff/evidence/batch-0/browser-baseline.mjs`. Frontend logic and the model fallback loop in `lib/ai.js` have no automated tests yet.
+`npm test`: 84 tests (node:test, no dependencies), 16 of them pin known defects by name. `npm run check`: syntax. `npm audit`: 0 vulnerabilities. Browser baseline script: `docs/agent-handoff/evidence/batch-0/browser-baseline.mjs`. Frontend logic and the model fallback loop in `lib/ai.js` have no automated tests yet.
 
 ## Owner inputs
-- 2026-10-14: wants study material (text, for example from a PDF) turned by AI into flashcards and quizzes for exam preparation. Not yet ruled on by Codex.
+- 2026-10-14: wants study material (text, for example from a PDF) turned by AI into flashcards and quizzes for exam preparation. Codex ruled it in as Phase 4.
 - Standing: zero cost; no push or deploy without the owner; natural Kosovo Albanian; engineering standard, not "it runs".
 
 ## Open with the owner
