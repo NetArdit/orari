@@ -233,6 +233,21 @@ describe("POST /api/create-plan", () => {
         assert.deepEqual(json.warnings, ["Kujdes", "Disa sesione u rregulluan për t'iu përshtatur kohës së lirë."]);
     });
 
+    test("P1-3: sessions come back in time order, without overlaps and without slivers", async () => {
+        fake.plan = async () => ({
+            ok: true,
+            data: planData([
+                planSession("2026-10-15", "08:00", "09:00"),
+                planSession("2026-10-14", "09:00", "11:00"),
+                planSession("2026-10-14", "08:00", "10:00"),
+                planSession("2026-10-14", "12:00", "12:10"),
+            ]),
+        });
+        const { json } = await post(base, "/api/create-plan", createBody());
+        assert.deepEqual(json.sessions.map((s) => `${s.date} ${s.startTime}-${s.endTime}`), ["2026-10-14 08:00-10:00", "2026-10-15 08:00-09:00"]);
+        assert.equal(json.stats.totalMinutes, 180);
+    });
+
     test("invalid bodies answer 400 without calling the AI", async () => {
         const missingSubject = createBody();
         delete missingSubject.structured.subject;
@@ -388,13 +403,6 @@ describe("KNOWN DEFECTS, to be reversed in Phase 1", () => {
         await post(base, "/api/adjust-plan", body);
         assert.equal(fake.planCalls.length, 1);
         assert.equal(fake.planCalls[0][0].calendar.every((d) => d.windows.length === 0), true);
-    });
-
-    test("KNOWN DEFECT P1-3: overlapping sessions are both returned", async () => {
-        fake.plan = async () => ({ ok: true, data: planData([planSession("2026-10-14", "08:00", "10:00"), planSession("2026-10-14", "09:00", "11:00")]) });
-        const { json } = await post(base, "/api/create-plan", createBody());
-        assert.equal(json.sessions.length, 2);
-        assert.equal(json.stats.totalMinutes, 240);
     });
 
     test("KNOWN DEFECT P1-6: a finished plan is refused with a message about the start date", async () => {

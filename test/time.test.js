@@ -155,6 +155,11 @@ describe("calendar", () => {
         assert.equal(fitsInWindow("2026-10-15", "08:00", "09:00", calendar), false);
     });
 
+    test("fitsInWindow judges position only; session length is sanitizeSessions' job", () => {
+        const calendar = buildCalendar("2026-10-14", "2026-10-14", [], [], []);
+        assert.equal(fitsInWindow("2026-10-14", "21:00", "21:05", calendar), true);
+    });
+
     test("fitsInWindow rejects a session that spans two windows across a commitment", () => {
         const lunch = [{ label: "Drekë", type: "meal", days: null, dates: null, start: "12:00", end: "13:00" }];
         const calendar = buildCalendar("2026-10-14", "2026-10-14", [], lunch, []);
@@ -177,11 +182,6 @@ describe("KNOWN DEFECTS, to be reversed in Phase 1", () => {
     test("KNOWN DEFECT P1-6: an availability window ending before it starts becomes two windows", () => {
         const reversed = [{ day: "wed", off: false, windows: [{ start: "20:00", end: "08:00" }] }];
         assert.deepEqual(windows("2026-10-14", reversed), ["07:00-08:00", "20:00-23:00"]);
-    });
-
-    test("KNOWN DEFECT P1-3: a five-minute session fits", () => {
-        const calendar = buildCalendar("2026-10-14", "2026-10-14", [], [], []);
-        assert.equal(fitsInWindow("2026-10-14", "21:00", "21:05", calendar), true);
     });
 
     test("KNOWN DEFECT P3: timeToMinutes accepts 24:30", () => {

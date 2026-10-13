@@ -56,7 +56,7 @@ describe("buildCalendarOrError", () => {
 describe("sanitizeSessions", () => {
     const calendar = buildCalendar("2026-10-14", "2026-10-15", [], [], []); // 07:00-23:00 both days
 
-    test("keeps sessions inside a free window, in the order given, and lists the dropped ones", () => {
+    test("keeps sessions inside a free window, in time order, and lists the dropped ones with the reason", () => {
         const inside = session("2026-10-15", "08:00", "09:00");
         const edge = session("2026-10-14", "22:00", "23:00");
         const tooEarly = session("2026-10-14", "06:00", "07:30");
@@ -65,8 +65,44 @@ describe("sanitizeSessions", () => {
 
         const { kept, dropped } = sanitizeSessions([inside, tooEarly, edge, otherDay, reversed], calendar);
 
-        assert.deepEqual(kept, [inside, edge]);
-        assert.deepEqual(dropped, ["2026-10-14 06:00-07:30", "2026-10-20 08:00-09:00", "2026-10-14 10:00-09:00"]);
+        assert.deepEqual(kept, [edge, inside]);
+        assert.deepEqual(dropped, [
+            "2026-10-14 06:00-07:30 (outside_free_time)",
+            "2026-10-14 10:00-09:00 (outside_free_time)",
+            "2026-10-20 08:00-09:00 (outside_free_time)",
+        ]);
+    });
+
+    test("P1-3: of overlapping or identical sessions only the earliest is kept", () => {
+        const a = session("2026-10-14", "08:00", "10:00");
+        const b = session("2026-10-14", "09:00", "11:00");
+        const inside = session("2026-10-14", "08:30", "09:00");
+        const later = session("2026-10-14", "11:00", "12:00");
+
+        const { kept, dropped } = sanitizeSessions([later, b, a, inside, a], calendar);
+
+        assert.deepEqual(kept, [a, later]);
+        assert.deepEqual(dropped, [
+            "2026-10-14 08:00-10:00 (overlap)",
+            "2026-10-14 08:30-09:00 (overlap)",
+            "2026-10-14 09:00-11:00 (overlap)",
+        ]);
+        assert.equal(computeStats(kept).totalMinutes, 180);
+    });
+
+    test("sessions that touch end to start, or sit at the same time on different days, are all kept", () => {
+        const first = session("2026-10-14", "08:00", "09:00");
+        const second = session("2026-10-14", "09:00", "10:00");
+        const nextDay = session("2026-10-15", "08:00", "09:00");
+        assert.deepEqual(sanitizeSessions([nextDay, second, first], calendar), { kept: [first, second, nextDay], dropped: [] });
+    });
+
+    test("P1-3: sessions under 20 minutes are dropped, exactly 20 is kept", () => {
+        const nineteen = session("2026-10-14", "08:00", "08:19");
+        const twenty = session("2026-10-14", "09:00", "09:20");
+        const { kept, dropped } = sanitizeSessions([nineteen, twenty], calendar);
+        assert.deepEqual(kept, [twenty]);
+        assert.deepEqual(dropped, ["2026-10-14 08:00-08:19 (too_short)"]);
     });
 
     test("an empty list gives empty results", () => {
@@ -101,15 +137,3 @@ describe("extractJsonPayload (model output is never trusted)", () => {
     });
 });
 
-describe("KNOWN DEFECTS, to be reversed in Phase 1", () => {
-    const calendar = buildCalendar("2026-10-14", "2026-10-14", [], [], []);
-
-    test("KNOWN DEFECT P1-3: overlapping and identical sessions are all kept and counted twice", () => {
-        const a = session("2026-10-14", "08:00", "10:00");
-        const b = session("2026-10-14", "09:00", "11:00");
-        const { kept, dropped } = sanitizeSessions([a, b, a], calendar);
-        assert.equal(kept.length, 3);
-        assert.deepEqual(dropped, []);
-        assert.equal(computeStats(kept).totalMinutes, 360);
-    });
-});
