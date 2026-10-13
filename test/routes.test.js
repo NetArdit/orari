@@ -48,6 +48,8 @@ const planSession = (date, startTime, endTime, extra = {}) => ({
     date, startTime, endTime, type: "learning", title: "Seancë", goal: "", tasks: [], material: null, difficulty: "medium", ...extra,
 });
 
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
+
 const planData = (sessions, extra = {}) => ({ strategy: "Strategjia", explanations: ["Sepse"], warnings: ["Kujdes"], sessions, ...extra });
 
 // 2026-10-14 (Wed) to 2026-10-15, nothing else: free 07:00-23:00 on both days.
@@ -194,10 +196,12 @@ describe("POST /api/create-plan", () => {
         assert.deepEqual([json.subject, json.startDate, json.endDate, json.planMode], ["Matematikë", "2026-10-14", "2026-10-15", "exam"]);
         assert.deepEqual([json.strategy, json.explanations, json.warnings], ["Strategjia", ["Sepse"], ["Kujdes"]]);
         assert.deepEqual(json.stats, { totalSessions: 2, totalMinutes: 150, totalHours: 2.5 });
-        assert.deepEqual(json.sessions.map((s) => [s.id, s.status, s.date, s.startTime, s.type]), [
-            ["s1", "pending", "2026-10-14", "08:00", "learning"],
-            ["s2", "pending", "2026-10-15", "20:00", "revision"],
+        assert.deepEqual(json.sessions.map((s) => [s.status, s.date, s.startTime, s.type]), [
+            ["pending", "2026-10-14", "08:00", "learning"],
+            ["pending", "2026-10-15", "20:00", "revision"],
         ]);
+        for (const s of json.sessions) assert.match(s.id, UUID);
+        assert.notEqual(json.sessions[0].id, json.sessions[1].id);
     });
 
     test("the AI receives the plan inputs and the computed calendar, with defaults applied", async () => {
@@ -224,7 +228,7 @@ describe("POST /api/create-plan", () => {
         const { status, json } = await post(base, "/api/create-plan", createBody());
 
         assert.equal(status, 200);
-        assert.deepEqual(json.sessions.map((s) => [s.id, s.startTime]), [["s1", "08:00"]]);
+        assert.deepEqual(json.sessions.map((s) => s.startTime), ["08:00"]);
         assert.deepEqual(json.stats, { totalSessions: 1, totalMinutes: 60, totalHours: 1 });
         assert.deepEqual(json.warnings, ["Kujdes", "Disa sesione u rregulluan për t'iu përshtatur kohës së lirë."]);
     });
@@ -290,18 +294,29 @@ describe("POST /api/adjust-plan", () => {
         progress: { today: "2026-10-15", ...progress },
     });
 
-    test("plans from today to the end date and returns ids starting at a1", async () => {
+    test("plans from today to the end date", async () => {
         fake.plan = async () => ({ ok: true, data: planData([planSession("2026-10-15", "08:00", "09:00"), planSession("2026-10-16", "08:00", "09:00")]) });
 
         const { status, json } = await post(base, "/api/adjust-plan", adjustBody());
 
         assert.equal(status, 200);
         assert.deepEqual([json.startDate, json.endDate], ["2026-10-15", "2026-10-16"]);
-        assert.deepEqual(json.sessions.map((s) => [s.id, s.status, s.date]), [
-            ["a1", "pending", "2026-10-15"],
-            ["a2", "pending", "2026-10-16"],
+        assert.deepEqual(json.sessions.map((s) => [s.status, s.date]), [
+            ["pending", "2026-10-15"],
+            ["pending", "2026-10-16"],
         ]);
+        for (const s of json.sessions) assert.match(s.id, UUID);
         assert.deepEqual(json.stats, { totalSessions: 2, totalMinutes: 120, totalHours: 2 });
+    });
+
+    test("P0-1: session ids never repeat across a plan's creation and its later adjustments", async () => {
+        fake.plan = async () => ({ ok: true, data: planData([planSession("2026-10-15", "08:00", "09:00"), planSession("2026-10-16", "08:00", "09:00")]) });
+        const created = await post(base, "/api/create-plan", createBody({ startDate: "2026-10-10", endDate: "2026-10-16" }));
+        const first = await post(base, "/api/adjust-plan", adjustBody());
+        const second = await post(base, "/api/adjust-plan", adjustBody());
+        const ids = [created, first, second].flatMap((r) => r.json.sessions.map((s) => s.id));
+        assert.equal(ids.length, 6);
+        assert.equal(new Set(ids).size, 6);
     });
 
     test("the AI receives only the remaining calendar and the progress summaries", async () => {
@@ -373,18 +388,6 @@ describe("KNOWN DEFECTS, to be reversed in Phase 1", () => {
         await post(base, "/api/adjust-plan", body);
         assert.equal(fake.planCalls.length, 1);
         assert.equal(fake.planCalls[0][0].calendar.every((d) => d.windows.length === 0), true);
-    });
-
-    test("KNOWN DEFECT P0-1 (server half): a second adjustment numbers its sessions from a1 again", async () => {
-        const body = { ...createBody({ startDate: "2026-10-10", endDate: "2026-10-16" }), progress: { today: "2026-10-15" } };
-        fake.plan = async () => ({ ok: true, data: planData([planSession("2026-10-15", "08:00", "09:00")]) });
-        const first = await post(base, "/api/adjust-plan", body);
-        const second = await post(base, "/api/adjust-plan", { ...body, progress: { today: "2026-10-16" } });
-        assert.equal(first.json.sessions[0].id, "a1");
-        assert.equal(second.json.sessions.length, 0); // the fake's session is on the 15th, outside the new calendar
-        fake.plan = async () => ({ ok: true, data: planData([planSession("2026-10-16", "08:00", "09:00")]) });
-        const third = await post(base, "/api/adjust-plan", { ...body, progress: { today: "2026-10-16" } });
-        assert.equal(third.json.sessions[0].id, "a1");
     });
 
     test("KNOWN DEFECT P1-3: overlapping sessions are both returned", async () => {
