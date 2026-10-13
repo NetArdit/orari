@@ -33,3 +33,12 @@ Roles (Codex's words): "I'm Codex, the independent technical reviewer and decisi
 - Interim legacy-client re-plan fix approved, with headless-browser journey evidence.
 - Batch 2: Phase 1 items in focused commits, plus the client fix in a separately revertible commit.
 - Two static design directions may be produced in parallel; owner selection precedes broad client UI. Both must show the same realistic planner tasks and comparable screens, include empty and error states, coherent light and dark themes, and must not settle the product name.
+
+## 2026-10-14 — `codex/04-batch-2-verdict.md`
+
+- Batch 2 ACCEPTED WITH EVIDENCE CONDITION: strengthen the re-plan browser journey to assert exact completed/missed progress summaries. (Done: 15 of 15 checks.)
+- Accept Batch 2 policy defaults: 30 AI requests/address/10 min, 4 concurrent AI jobs/process, 75 s overall AI deadline.
+- Accept no adjust timezone field because validated progress.today already supplies the client-local date. All eight reported deviations accepted.
+- Albanian copy corrections given ("seancë" rather than "sesion", and others). (Applied verbatim.)
+- Batch 3: use Vitest; serve the new client at /app with legacy root retained; migrate profiles/plans to versioned IndexedDB without passwords; retain old keys through coexistence and remove them at verified cutover. Extend the legacy journey to plan creation. Report resource footprint (dependencies, bundle, disk, peak build memory).
+- Codex reviews both static design directions before owner review.

@@ -202,8 +202,20 @@ try {
 
     const sent = await evaluate(`window.__sent.adjust`);
     check("the request tells the server today's date", sent?.progress?.today === TODAY, sent?.progress);
-    check("completed and partial sessions are reported as done", sent?.progress?.completedSessionSummaries?.length === 4, sent?.progress?.completedSessionSummaries);
-    check("missed and skipped sessions are reported as missed", sent?.progress?.missedSessionSummaries?.length === 2, sent?.progress?.missedSessionSummaries);
+    const expectedDone = [
+        `${isoDay(-2)} KEEP past completed (completed)`,
+        `${TODAY} KEEP today completed (completed)`,
+        `${TODAY} KEEP today partial (partial)`,
+        `${isoDay(3)} KEEP future completed (completed)`,
+    ];
+    const expectedMissed = [`${isoDay(-1)} KEEP past missed`, `${TODAY} KEEP today skipped`];
+    check("exactly the completed and partial sessions are reported as done, each with its date, title and status",
+        JSON.stringify(sent?.progress?.completedSessionSummaries) === JSON.stringify(expectedDone),
+        { sent: sent?.progress?.completedSessionSummaries, expected: expectedDone });
+    check("exactly the overdue and skipped sessions are reported as missed, each with its date and title",
+        JSON.stringify(sent?.progress?.missedSessionSummaries) === JSON.stringify(expectedMissed),
+        { sent: sent?.progress?.missedSessionSummaries, expected: expectedMissed });
+    check("the request carries the plan's own inputs unchanged", JSON.stringify(sent?.structured) === JSON.stringify(seedUser().plans[0].structured), sent?.structured);
 
     const after = await storedSessions();
     const titles = after.map((s) => s.title).sort();

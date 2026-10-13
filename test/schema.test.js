@@ -37,7 +37,7 @@ describe("ParseRequestBody", () => {
         assert.equal(ok(ParseRequestBody, { text: "abc", timeZone: "Prishtina" }), false);
         assert.equal(ok(ParseRequestBody, { text: "abc", timeZone: "E".repeat(65) }), false);
         assert.deepEqual(fieldErrors(ParseRequestBody.safeParse({ text: "abc", timeZone: "Prishtina" }).error), [
-            { path: "timeZone", message: "Zona kohore nuk njihet." },
+            { path: "timeZone", message: "Zona kohore nuk është e vlefshme." },
         ]);
     });
 });
@@ -207,12 +207,12 @@ describe("fieldErrors", () => {
         body.profile.name = "";
 
         assert.deepEqual(errorsFor(CreatePlanBody, body), [
-            { path: "profile.name", message: "Vlera është shumë e shkurtër ose shumë e vogël." },
+            { path: "profile.name", message: "Vlera është nën minimumin e lejuar." },
             { path: "structured.startDate", message: "Data nuk është e vlefshme." },
-            { path: "structured.subject", message: "Kjo fushë mungon." },
-            { path: "structured.weeklyAvailability.0.windows.0.end", message: "Ora e mbarimit duhet të jetë pas orës së fillimit." },
-            { path: "structured.weeklyAvailability.0.windows.1.start", message: "Ora duhet të shkruhet si 08:30." },
-            { path: "structured.sessionPreferenceMinutes", message: "Vlera është shumë e gjatë ose shumë e madhe." },
+            { path: "structured.subject", message: "Plotëso këtë fushë." },
+            { path: "structured.weeklyAvailability.0.windows.0.end", message: "Koha e përfundimit duhet të jetë pas kohës së fillimit." },
+            { path: "structured.weeklyAvailability.0.windows.1.start", message: "Shkruaje orën në formatin 08:30." },
+            { path: "structured.sessionPreferenceMinutes", message: "Vlera e dhënë e kalon kufirin e lejuar." },
         ]);
     });
 

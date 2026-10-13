@@ -1,6 +1,6 @@
 {
   "base": "http://127.0.0.1:3987",
-  "startedAt": "2026-10-13T23:41:01.555Z",
+  "startedAt": "2026-10-13T23:46:50.193Z",
   "browser": "Edg/155.0.4283.45",
   "today": "2026-10-14",
   "checks": [
@@ -27,22 +27,54 @@
       }
     },
     {
-      "name": "completed and partial sessions are reported as done",
+      "name": "exactly the completed and partial sessions are reported as done, each with its date, title and status",
       "pass": true,
-      "detail": [
-        "2026-10-12 KEEP past completed (completed)",
-        "2026-10-14 KEEP today completed (completed)",
-        "2026-10-14 KEEP today partial (partial)",
-        "2026-10-17 KEEP future completed (completed)"
-      ]
+      "detail": {
+        "sent": [
+          "2026-10-12 KEEP past completed (completed)",
+          "2026-10-14 KEEP today completed (completed)",
+          "2026-10-14 KEEP today partial (partial)",
+          "2026-10-17 KEEP future completed (completed)"
+        ],
+        "expected": [
+          "2026-10-12 KEEP past completed (completed)",
+          "2026-10-14 KEEP today completed (completed)",
+          "2026-10-14 KEEP today partial (partial)",
+          "2026-10-17 KEEP future completed (completed)"
+        ]
+      }
     },
     {
-      "name": "missed and skipped sessions are reported as missed",
+      "name": "exactly the overdue and skipped sessions are reported as missed, each with its date and title",
       "pass": true,
-      "detail": [
-        "2026-10-13 KEEP past missed",
-        "2026-10-14 KEEP today skipped"
-      ]
+      "detail": {
+        "sent": [
+          "2026-10-13 KEEP past missed",
+          "2026-10-14 KEEP today skipped"
+        ],
+        "expected": [
+          "2026-10-13 KEEP past missed",
+          "2026-10-14 KEEP today skipped"
+        ]
+      }
+    },
+    {
+      "name": "the request carries the plan's own inputs unchanged",
+      "pass": true,
+      "detail": {
+        "startDate": "2026-10-12",
+        "endDate": "2026-10-19",
+        "subject": "Matematikë",
+        "materialAmount": null,
+        "goal": null,
+        "planMode": "exam",
+        "weeklyAvailability": [],
+        "commitments": [],
+        "unavailableDates": [],
+        "sessionPreferenceMinutes": 60,
+        "energy": null,
+        "difficulty": "medium"
+      }
     },
     {
       "name": "P0-1: every session already acted on is kept, including today's; pending ones from today on are replaced",

@@ -18,7 +18,7 @@ Node 24.20, Express 5.2.1 (app built by `createApp` in `lib/app.js`), zod 3.25.7
 Local repository, branch `main`, no remote. Baseline of the untouched project: `b68ef0e`.
 
 ## Gate
-Batch 0 and Batch 1 ACCEPTED WITH CONDITIONS by Codex (conditions met). Batch 2 (ten correctness and reliability items) delivered, awaiting Codex's verdict. Two static design directions for the owner are in progress.
+Batches 0, 1 and 2 accepted by Codex; all conditions met. Batch 3 (client foundation: `client/` with Vite, React, Tailwind, strict TypeScript, Vitest; typed API client; versioned IndexedDB storage with migration from the old data, no password; router; build served at `/app`, old page stays at `/`) is authorized and not started. Two static design directions (`docs/design/`) are with Codex for review; after that the owner chooses one, and no broad UI is built before that choice.
 
 ## Approved direction (Codex, 2026-10-14)
 - `client/` with Vite, React, Tailwind, strict TypeScript, types inferred from the Zod schemas; Express, API contracts and business rules stay; new client built beside the old one after the safety net, one cutover after parity and storage migration.

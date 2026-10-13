@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="sq" data-direction="a" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dy drejtime vizuale</title>
+    <link rel="stylesheet" href="directions.css">
+</head>
+<body>
+
+<header class="bar">
+    <div>
+        <h1>Dy drejtime vizuale për planifikuesin</h1>
+        <p>Të njëjtat ekrane dhe të njëjtat fjalë; ndryshon vetëm pamja. Ndërro me butonat.</p>
+    </div>
+    <div class="switches">
+        <div class="switch" role="group" aria-label="Drejtimi">
+            <button type="button" data-set="direction" data-value="a" aria-pressed="true">A · Fletore</button>
+            <button type="button" data-set="direction" data-value="b" aria-pressed="false">B · Tabelë</button>
+        </div>
+        <div class="switch" role="group" aria-label="Tema">
+            <button type="button" data-set="theme" data-value="light" aria-pressed="true">E çelët</button>
+            <button type="button" data-set="theme" data-value="dark" aria-pressed="false">E errët</button>
+        </div>
+    </div>
+</header>
+
+<div class="about">
+    <p data-only="a"><strong>A · Fletore.</strong> Si një planifikues i shtypur: letër e ngrohtë, shkronja me bisht për titujt, një e gjelbër e thellë, ora rreshtohet në anë si në ditar. E qetë, e lexueshme, më afër një fletoreje sesa një aplikacioni.</p>
+    <p data-only="b"><strong>B · Tabelë.</strong> Si tabela e nisjeve në stacion: e ftohtë dhe e saktë, orët me numra të mëdhenj, një e kaltër e fortë, çdo seancë me ngjyrën e llojit të vet. Më e mprehtë, më teknike.</p>
+</div>
+
+<main class="screens">
+
+    <!-- 1. SOT -->
+    <section class="shot">
+        <h2>1 · Sot</h2>
+        <div class="phone">
+            <div class="body">
+                <div>
+                    <p class="eyebrow date">E mërkurë, 14 tetor</p>
+                    <h3 class="title">Mirëmëngjes, Arta</h3>
+                </div>
+
+                <div class="next">
+                    <p class="eyebrow">Seanca e radhës · Matematikë</p>
+                    <div class="when"><span class="time">17:30</span><span>deri 18:30</span></div>
+                    <h3>Derivatet: rregullat bazë</h3>
+                    <ul>
+                        <li>Lexo faqet 84–91</li>
+                        <li>Zgjidh ushtrimet 1–6</li>
+                    </ul>
+                    <div class="row">
+                        <button class="btn primary" type="button">Fillo tani</button>
+                        <button class="btn quiet" type="button">Shtyje</button>
+                    </div>
+                </div>
+
+                <div>
+                    <p class="section-label">Sot <span>2 nga 3</span></p>
+                    <div class="day">
+                        <div class="slot done">
+                            <span class="time">08:00<small>45 min</small></span>
+                            <div>
+                                <span class="kind recall">Rikujtim</span>
+                                <h4>Formulat e trigonometrisë</h4>
+                                <span class="state ok">✓ E kreva</span>
+                            </div>
+                        </div>
+                        <div class="slot">
+                            <span class="time">17:30<small>1 orë</small></span>
+                            <div>
+                                <span class="kind learn">Mësim i ri</span>
+                                <h4>Derivatet: rregullat bazë</h4>
+                                <p class="meta">Kapitulli 4</p>
+                            </div>
+                        </div>
+                        <div class="slot">
+                            <span class="time">21:00<small>30 min</small></span>
+                            <div>
+                                <span class="kind practice">Ushtrime</span>
+                                <h4>Detyra nga libri, faqe 92</h4>
+                                <div class="marks">
+                                    <button class="mark" type="button" aria-pressed="false">E kreva</button>
+                                    <button class="mark" type="button" aria-pressed="false">Përgjysmë</button>
+                                    <button class="mark" type="button" aria-pressed="false">S'e bëra</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div>
+                    <p class="section-label">Kjo javë <span>4 ditë rresht</span></p>
+                    <div class="week">
+                        <div>Hën<b>12</b><span class="dots"><i class="on"></i><i class="on"></i></span></div>
+                        <div>Mar<b>13</b><span class="dots"><i class="on"></i></span></div>
+                        <div class="today">Mër<b>14</b><span class="dots"><i class="on"></i><i></i><i></i></span></div>
+                        <div>Enj<b>15</b><span class="dots"><i></i><i></i></span></div>
+                        <div>Pre<b>16</b><span class="dots"><i></i></span></div>
+                        <div>Sht<b>17</b><span class="dots"><i></i><i></i></span></div>
+                        <div>Die<b>18</b><span class="dots"></span></div>
+                    </div>
+                </div>
+            </div>
+            <nav class="nav" aria-label="Kryesore">
+                <a href="#" aria-current="page">Sot</a><a href="#">Orari</a><a href="#">Plan i ri</a><a href="#">Unë</a>
+            </nav>
+        </div>
+    </section>
+
+    <!-- 2. PLAN I RI: PËRSHKRIMI -->
+    <section class="shot">
+        <h2>2 · Plan i ri</h2>
+        <div class="phone">
+            <div class="body">
+                <div>
+                    <p class="eyebrow">Hapi 1 nga 2</p>
+                    <h3 class="title small">Çfarë ke për të mësuar?</h3>
+                    <p class="lede">Shkruaje si t'ia tregoje një shoku: lëndën, deri kur, dhe kur je i lirë.</p>
+                </div>
+
+                <div class="field">
+                    <label for="pershkrimi">Përshkrimi yt</label>
+                    <textarea id="pershkrimi">Më 30 tetor kam provimin e Matematikës, kapitujt 3 deri 5. Punoj prej 9 deri në 5, të shtunave jam i lirë krejt ditën. Të dielave s'dua me mësu.</textarea>
+                    <p class="hint">Mos u mërzit për drejtshkrimin. Para se ta krijojmë orarin, do ta shohësh çfarë kemi kuptuar dhe mund ta ndreqësh.</p>
+                </div>
+
+                <button class="btn primary full" type="button">Vazhdo</button>
+                <button class="btn quiet full" type="button">Më mirë e plotësoj vetë, hap pas hapi</button>
+
+                <p class="hint">Teksti që shkruan i dërgohet një shërbimi të jashtëm të inteligjencës artificiale për ta lexuar. Mos shkruaj gjëra që s'do t'i ndaje me të tjerët.</p>
+            </div>
+            <nav class="nav" aria-label="Kryesore">
+                <a href="#">Sot</a><a href="#">Orari</a><a href="#" aria-current="page">Plan i ri</a><a href="#">Unë</a>
+            </nav>
+        </div>
+    </section>
+
+    <!-- 3. PLAN I RI: ÇFARË KUPTUAM -->
+    <section class="shot">
+        <h2>3 · Kontrollo para se ta krijosh</h2>
+        <div class="phone">
+            <div class="body">
+                <div>
+                    <p class="eyebrow">Hapi 2 nga 2</p>
+                    <h3 class="title small">A e kemi kuptuar mirë?</h3>
+                    <p class="lede">Ndreqe çfarëdo që s'është ashtu.</p>
+                </div>
+
+                <div class="field">
+                    <label for="lenda">Lënda</label>
+                    <input id="lenda" type="text" value="Matematikë, kapitujt 3–5">
+                </div>
+
+                <div class="pair">
+                    <div class="field">
+                        <label for="prej">Prej</label>
+                        <input id="prej" type="text" value="14 tetor">
+                    </div>
+                    <div class="field invalid">
+                        <label for="deri">Deri</label>
+                        <input id="deri" type="text" value="31 shtator" aria-invalid="true" aria-describedby="deri-gabim">
+                        <p class="error" id="deri-gabim">Shtatori ka 30 ditë.</p>
+                    </div>
+                </div>
+
+                <div>
+                    <p class="legend">Ditët kur mëson</p>
+                    <div class="chips" style="margin-top:8px">
+                        <span class="chip" aria-pressed="true">Hën</span><span class="chip" aria-pressed="true">Mar</span><span class="chip" aria-pressed="true">Mër</span><span class="chip" aria-pressed="true">Enj</span><span class="chip" aria-pressed="true">Pre</span><span class="chip" aria-pressed="true">Sht</span><span class="chip" aria-pressed="false">Die</span>
+                    </div>
+                </div>
+
+                <div>
+                    <p class="legend">Koha e zënë</p>
+                    <div class="understood" style="margin-top:8px">
+                        <div class="item"><span>Puna<small>E hënë deri të premte, 09:00–17:00</small></span><button class="btn quiet" type="button">Ndrysho</button></div>
+                        <div class="item"><span>Gjumi<small>Çdo natë, 23:00–07:00</small></span><button class="btn quiet" type="button">Ndrysho</button></div>
+                        <button class="btn" type="button">+ Shto diçka tjetër</button>
+                    </div>
+                </div>
+
+                <div class="ask">
+                    <p>Një pyetje: sa zgjat rruga deri në punë?</p>
+                    <div class="field">
+                        <label for="rruga" class="hint">Që të mos të vëmë seancë kur je në autobus.</label>
+                        <input id="rruga" type="text" placeholder="p.sh. 30 minuta">
+                    </div>
+                </div>
+
+                <button class="btn primary full" type="button" disabled>Krijo orarin</button>
+            </div>
+        </div>
+    </section>
+
+    <!-- 4. GJENDJE BOSH -->
+    <section class="shot">
+        <h2>4 · Kur s'ka asnjë plan</h2>
+        <div class="phone">
+            <div class="body">
+                <div class="empty">
+                    <h3 class="title">Ende s'ke orar</h3>
+                    <p class="lede">Krijoje të parin për dy minuta.</p>
+                    <ol class="steps">
+                        <li>Tregon çfarë ke për të mësuar dhe deri kur.</li>
+                        <li>Tregon kur punon, kur ke shkollë, kur fle.</li>
+                        <li>Merr një orar që futet në kohën tënde të lirë.</li>
+                    </ol>
+                    <button class="btn primary full" type="button">Krijo planin e parë</button>
+                    <button class="btn quiet full" type="button">Kam një kopje rezervë, ktheje</button>
+                </div>
+            </div>
+            <nav class="nav" aria-label="Kryesore">
+                <a href="#" aria-current="page">Sot</a><a href="#">Orari</a><a href="#">Plan i ri</a><a href="#">Unë</a>
+            </nav>
+        </div>
+    </section>
+
+    <!-- 5. PRITJE DHE GABIM -->
+    <section class="shot">
+        <h2>5 · Kur diçka zgjat ose s'shkon</h2>
+        <div class="phone">
+            <div class="body">
+                <div>
+                    <p class="eyebrow">Duke punuar</p>
+                    <h3 class="title small">Po e ndërtojmë orarin</h3>
+                </div>
+                <div class="notice warn">
+                    <strong>Po i vendosim seancat në kohën tënde të lirë…</strong>
+                    <div class="progress" role="progressbar" aria-label="Ecuria" aria-valuenow="62" aria-valuemin="0" aria-valuemax="100"><i></i></div>
+                    <p>Zakonisht zgjat nën një minutë.</p>
+                    <button class="btn" type="button">Ndale</button>
+                </div>
+
+                <div>
+                    <p class="eyebrow">Kur s'del</p>
+                </div>
+                <div class="notice bad" role="alert">
+                    <strong>Shërbimi po vonon më shumë se zakonisht</strong>
+                    <p>Orari s'u krijua. Asgjë nga ajo që shkrove s'ka humbur.</p>
+                    <div style="display:flex; gap:10px; flex-wrap:wrap">
+                        <button class="btn primary" type="button">Provo prapë</button>
+                        <button class="btn" type="button">Kthehu te përshkrimi</button>
+                    </div>
+                </div>
+
+                <div class="notice warn">
+                    <strong>2 seanca u hoqën</strong>
+                    <p>Binin në orët kur punon. Pjesa tjetër e orarit është në rregull.</p>
+                    <button class="btn quiet" type="button">Shih cilat</button>
+                </div>
+
+                <div class="notice bad">
+                    <strong>Je pa internet</strong>
+                    <p>Orarin që ke mund ta shohësh dhe ta shënosh. Për plan të ri duhet lidhja.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 6. NJË SEANCË -->
+    <section class="shot">
+        <h2>6 · Një seancë e hapur</h2>
+        <div class="phone">
+            <div class="body">
+                <div>
+                    <button class="btn quiet" type="button">← Orari</button>
+                </div>
+                <div>
+                    <span class="kind learn">Mësim i ri</span>
+                    <h3 class="title small" style="margin-top:8px">Derivatet: rregullat bazë</h3>
+                    <p class="lede"><span class="time">17:30–18:30</span> · E mërkurë, 14 tetor · Matematikë</p>
+                </div>
+
+                <div class="understood">
+                    <p class="legend">Qëllimi</p>
+                    <p>Të dish ta gjesh derivatin e një polinomi pa e parë tabelën.</p>
+                </div>
+
+                <div>
+                    <p class="legend">Çfarë bën në këtë orë</p>
+                    <div class="understood" style="margin-top:8px">
+                        <div class="item"><span>Lexo faqet 84–91<small>rreth 25 minuta</small></span></div>
+                        <div class="item"><span>Zgjidh ushtrimet 1–6<small>rreth 25 minuta</small></span></div>
+                        <div class="item"><span>Shëno çfarë s'kuptove<small>për seancën e rikujtimit të enjten</small></span></div>
+                    </div>
+                </div>
+
+                <div class="notice warn">
+                    <strong>Pse sot dhe pse kaq herët?</strong>
+                    <p>Ke thënë që pas punës je më i freskët se në mbrëmje, prandaj mësimi i ri vjen para ushtrimeve.</p>
+                </div>
+
+                <div>
+                    <p class="legend">Si shkoi?</p>
+                    <div class="marks">
+                        <button class="mark" type="button" aria-pressed="true">✓ E kreva</button>
+                        <button class="mark" type="button" aria-pressed="false">Përgjysmë</button>
+                        <button class="mark" type="button" aria-pressed="false">S'e bëra</button>
+                    </div>
+                </div>
+
+                <button class="btn full" type="button">Zhvendose në një orë tjetër</button>
+            </div>
+            <nav class="nav" aria-label="Kryesore">
+                <a href="#">Sot</a><a href="#" aria-current="page">Orari</a><a href="#">Plan i ri</a><a href="#">Unë</a>
+            </nav>
+        </div>
+    </section>
+
+    <!-- 7. ORARI I JAVËS, EKRAN I GJERË -->
+    <section class="shot wide">
+        <h2>7 · Orari i javës, në kompjuter</h2>
+        <div class="desk">
+            <div class="head">
+                <div>
+                    <p class="eyebrow date">12 – 18 tetor</p>
+                    <h3 class="title small">Matematikë, deri më 30 tetor</h3>
+                </div>
+                <div class="tabs"><span>Sot</span><b>Orari</b><span>Plan i ri</span><span>Unë</span></div>
+                <div style="display:flex; gap:10px">
+                    <button class="btn" type="button">Shto në kalendar</button>
+                    <button class="btn primary" type="button">Rregulloje planin</button>
+                </div>
+            </div>
+            <div class="grid">
+                <div class="col">
+                    <header>E hënë<b>12</b></header>
+                    <div class="block learn"><span class="time">07:30–08:30</span><span class="kind learn">Mësim i ri</span><strong>Funksionet: përkufizimi</strong><span class="state ok">✓ E kreva</span></div>
+                    <div class="busy">Puna 09:00–17:00</div>
+                    <div class="block practice"><span class="time">18:00–19:00</span><span class="kind practice">Ushtrime</span><strong>Funksionet, 1–10</strong><span class="state ok">✓ E kreva</span></div>
+                </div>
+                <div class="col">
+                    <header>E martë<b>13</b></header>
+                    <div class="busy">Puna 09:00–17:00</div>
+                    <div class="block recall"><span class="time">20:00–20:30</span><span class="kind recall">Rikujtim</span><strong>Formulat e javës së kaluar</strong><span class="state missed">S'u bë</span></div>
+                </div>
+                <div class="col today">
+                    <header>E mërkurë<b>14</b></header>
+                    <div class="block recall"><span class="time">08:00–08:45</span><span class="kind recall">Rikujtim</span><strong>Formulat e trigonometrisë</strong><span class="state ok">✓ E kreva</span></div>
+                    <div class="busy">Puna 09:00–17:00</div>
+                    <div class="block learn"><span class="time">17:30–18:30</span><span class="kind learn">Mësim i ri</span><strong>Derivatet: rregullat bazë</strong></div>
+                    <div class="block practice"><span class="time">21:00–21:30</span><span class="kind practice">Ushtrime</span><strong>Detyra, faqe 92</strong></div>
+                </div>
+                <div class="col">
+                    <header>E enjte<b>15</b></header>
+                    <div class="busy">Puna 09:00–17:00</div>
+                    <div class="block learn"><span class="time">18:00–19:00</span><span class="kind learn">Mësim i ri</span><strong>Derivati i prodhimit</strong></div>
+                    <div class="block practice"><span class="time">20:30–21:15</span><span class="kind practice">Ushtrime</span><strong>Derivatet, 1–12</strong></div>
+                </div>
+                <div class="col">
+                    <header>E premte<b>16</b></header>
+                    <div class="busy">Puna 09:00–17:00</div>
+                    <div class="block review"><span class="time">18:00–19:00</span><span class="kind review">Përsëritje</span><strong>Kapitulli 3, krejt</strong></div>
+                </div>
+                <div class="col">
+                    <header>E shtunë<b>17</b></header>
+                    <div class="block learn"><span class="time">10:00–11:30</span><span class="kind learn">Mësim i ri</span><strong>Zbatime të derivatit</strong></div>
+                    <div class="block test"><span class="time">16:00–17:00</span><span class="kind test">Test provues</span><strong>Kapitujt 3 dhe 4</strong></div>
+                </div>
+                <div class="col">
+                    <header>E diel<b>18</b></header>
+                    <p class="rest">Pushim. Kështu ke thënë.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+</main>
+
+<script>
+    // Switch direction and theme; remember the choice on this device if the browser allows it.
+    const root = document.documentElement;
+    const apply = (name, value) => {
+        root.dataset[name] = value;
+        document.querySelectorAll(`[data-set="${name}"]`).forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.value === value)));
+    };
+    // A link can fix the view: index.html?direction=b&theme=dark
+    const fromLink = new URLSearchParams(location.search);
+    for (const name of ["direction", "theme"]) {
+        try {
+            const saved = fromLink.get(name) || localStorage.getItem("design-" + name);
+            if (saved) apply(name, saved);
+        } catch { /* private window: start from the defaults */ }
+    }
+    document.querySelectorAll("[data-set]").forEach((button) => {
+        button.addEventListener("click", () => {
+            apply(button.dataset.set, button.dataset.value);
+            try { localStorage.setItem("design-" + button.dataset.set, button.dataset.value); } catch { /* ignore */ }
+        });
+    });
+</script>
+
+</body>
+</html>
