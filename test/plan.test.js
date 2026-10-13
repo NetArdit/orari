@@ -34,6 +34,7 @@ describe("buildCalendarOrError", () => {
 
     test("invalid dates, reversed dates and periods over 180 days give the safe Albanian message", () => {
         assert.deepEqual(buildCalendarOrError(structured({ startDate: "2026-13-01" })), { error: "Datat e planit nuk janë valide." });
+        assert.deepEqual(buildCalendarOrError(structured({ startDate: "2026-02-31", endDate: "2026-03-04" })), { error: "Datat e planit nuk janë valide." });
         assert.deepEqual(buildCalendarOrError(structured({ endDate: "2026-10-13" })), { error: "Data e fillimit duhet të jetë para datës së mbarimit." });
         assert.deepEqual(buildCalendarOrError(structured({ startDate: "2026-01-01", endDate: "2026-06-30" })), {
             error: "Periudha e planit është shumë e gjatë (maksimumi ~6 muaj).",
@@ -110,10 +111,5 @@ describe("KNOWN DEFECTS, to be reversed in Phase 1", () => {
         assert.equal(kept.length, 3);
         assert.deepEqual(dropped, []);
         assert.equal(computeStats(kept).totalMinutes, 360);
-    });
-
-    test("KNOWN DEFECT P0-3: an impossible start date yields a calendar for a different date", () => {
-        const { calendar: shifted } = buildCalendarOrError(structured({ startDate: "2026-02-31", endDate: "2026-03-04" }));
-        assert.deepEqual(shifted.map((d) => d.date), ["2026-03-03", "2026-03-04"]);
     });
 });

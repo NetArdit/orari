@@ -134,6 +134,20 @@ describe("CreatePlanBody", () => {
         assert.equal(withWindow("09:00", "24:00"), false);
     });
 
+    test("dates that do not exist are rejected everywhere a date is accepted", () => {
+        const start = minimalCreate();
+        start.structured.startDate = "2026-02-31";
+        assert.equal(ok(CreatePlanBody, start), false);
+
+        const unavailable = minimalCreate();
+        unavailable.structured.unavailableDates = ["2026-04-31"];
+        assert.equal(ok(CreatePlanBody, unavailable), false);
+
+        assert.equal(ok(AdjustPlanBody, { ...minimalCreate(), progress: { today: "2026-06-31" } }), false);
+        assert.equal(ok(ParsedRequestSchema, { endDate: "2026-02-30" }), false);
+        assert.equal(ok(PlanResponseSchema, { sessions: [{ date: "2026-02-30", startTime: "08:00", endTime: "09:00", type: "learning", title: "x" }] }), false);
+    });
+
     test("fields the schema does not know are dropped, not rejected", () => {
         const body = minimalCreate();
         body.structured.extra = "x";
@@ -155,12 +169,6 @@ describe("AdjustPlanBody", () => {
 });
 
 describe("KNOWN DEFECTS, to be reversed in Phase 1", () => {
-    test("KNOWN DEFECT P0-3: the date shape check accepts dates that do not exist", () => {
-        const body = minimalCreate();
-        body.structured.startDate = "2026-02-31";
-        assert.equal(ok(CreatePlanBody, body), true);
-    });
-
     test("KNOWN DEFECT P0-5: the number of commitments is unbounded", () => {
         const body = minimalCreate();
         body.structured.commitments = Array.from({ length: 5000 }, () => ({ label: "a", start: "09:00", end: "10:00" }));

@@ -47,6 +47,10 @@ describe("time helpers", () => {
         assert.equal(isValidDateStr("2026-10-14"), true);
         assert.equal(isValidDateStr("2028-02-29"), true);
         assert.equal(isValidDateStr("2026-13-01"), false);
+        assert.equal(isValidDateStr("2026-02-31"), false);
+        assert.equal(isValidDateStr("2026-04-31"), false);
+        assert.equal(isValidDateStr("2026-02-29"), false);
+        assert.equal(isValidDateStr("2026-12-31"), true);
         assert.equal(isValidDateStr("2026-00-10"), false);
         assert.equal(isValidDateStr("14-10-2026"), false);
         assert.equal(isValidDateStr("2026-10-14T00:00"), false);
@@ -161,13 +165,6 @@ describe("calendar", () => {
 /* Behaviour the audit identified as wrong (docs/agent-handoff/CLAUDE_REPORT.md). These tests record what
    the code does today so that the fix is a deliberate, visible change of the expectation. */
 describe("KNOWN DEFECTS, to be reversed in Phase 1", () => {
-    test("KNOWN DEFECT P0-3: impossible dates are accepted and moved to another date", () => {
-        assert.equal(isValidDateStr("2026-02-31"), true);
-        assert.deepEqual(dateRange("2026-02-31", "2026-02-31"), ["2026-03-03"]);
-        assert.equal(isValidDateStr("2026-04-31"), true);
-        assert.deepEqual(dateRange("2026-04-31", "2026-04-31"), ["2026-05-01"]);
-    });
-
     test("KNOWN DEFECT P1-5: a commitment crossing midnight blocks the morning of its own day, not the next", () => {
         const sleep = { label: "Gjumë", type: "sleep", days: null, dates: null, start: "00:00", end: "06:00" };
         const shift = { label: "Ndërrimi i natës", type: "work", days: ["mon"], dates: null, start: "20:00", end: "10:00" };

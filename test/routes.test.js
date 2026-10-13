@@ -254,6 +254,13 @@ describe("POST /api/create-plan", () => {
         assert.equal(fake.planCalls.length, 0);
     });
 
+    test("31 February is refused and never reaches the AI", async () => {
+        const { status, json } = await post(base, "/api/create-plan", createBody({ startDate: "2026-02-31", endDate: "2026-03-04" }));
+        assert.equal(status, 400);
+        assert.deepEqual(json, { error: "Datat e planit nuk janë valide." });
+        assert.equal(fake.planCalls.length, 0);
+    });
+
     test("no free time at all answers 400 without calling the AI", async () => {
         const body = createBody({ weeklyAvailability: [{ day: "wed", off: true }, { day: "thu", off: true }] });
         const { status, json } = await post(base, "/api/create-plan", body);
@@ -385,13 +392,6 @@ describe("KNOWN DEFECTS, to be reversed in Phase 1", () => {
         const { json } = await post(base, "/api/create-plan", createBody());
         assert.equal(json.sessions.length, 2);
         assert.equal(json.stats.totalMinutes, 240);
-    });
-
-    test("KNOWN DEFECT P0-3: 31 February is accepted and the plan silently starts on 3 March", async () => {
-        const { status, json } = await post(base, "/api/create-plan", createBody({ startDate: "2026-02-31", endDate: "2026-03-04" }));
-        assert.equal(status, 200);
-        assert.equal(json.startDate, "2026-02-31");
-        assert.deepEqual(fake.planCalls[0][0].calendar.map((d) => d.date), ["2026-03-03", "2026-03-04"]);
     });
 
     test("KNOWN DEFECT P1-6: a finished plan is refused with a message about the start date", async () => {
