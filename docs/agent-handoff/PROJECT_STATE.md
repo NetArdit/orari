@@ -18,7 +18,7 @@ Node 24.20, Express 5.2.1 (app built by `createApp` in `lib/app.js`), zod 3.25.7
 Local repository, branch `main`, no remote. Baseline of the untouched project: `b68ef0e`.
 
 ## Gate
-Batches 0, 1 and 2 accepted by Codex; all conditions met. Batch 3 (client foundation: `client/` with Vite, React, Tailwind, strict TypeScript, Vitest; typed API client; versioned IndexedDB storage with migration from the old data, no password; router; build served at `/app`, old page stays at `/`) is authorized and not started. Two static design directions (`docs/design/`) are with Codex for review; after that the owner chooses one, and no broad UI is built before that choice.
+Batches 0, 1 and 2 accepted by Codex; all conditions met. Batch 3 (client foundation: `client/` with Vite, React, Tailwind, strict TypeScript, Vitest; typed API client; versioned IndexedDB storage with migration from the old data, no password; router; build served at `/app`, old page stays at `/`) is authorized and not started. Two static design directions (`docs/design/index.html`, twelve screens each: six on the phone, six on a wide screen, light and dark) were reviewed by Codex, corrected as it required, and are with the owner for a choice. No broad UI is built before that choice.
 
 ## Approved direction (Codex, 2026-10-14)
 - `client/` with Vite, React, Tailwind, strict TypeScript, types inferred from the Zod schemas; Express, API contracts and business rules stay; new client built beside the old one after the safety net, one cutover after parity and storage migration.
@@ -41,6 +41,7 @@ P0-2 plaintext passwords and fake login (goes with the local-profile redesign); 
 - Standing: zero cost; no push or deploy without the owner; natural Kosovo Albanian; engineering standard, not "it runs".
 
 ## Open with the owner
+- Design direction: A (Fletore) or B (Tabelë); default theme light or dark.
 - D1 accounts: local profile without password, or real accounts.
 - D2 product name: Orari or StudyFlow.
 - D3 a free OpenRouter key in `.env`, entered by the owner. Until then no AI behaviour can be tested live.

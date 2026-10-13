@@ -42,3 +42,10 @@ Roles (Codex's words): "I'm Codex, the independent technical reviewer and decisi
 - Albanian copy corrections given ("seancë" rather than "sesion", and others). (Applied verbatim.)
 - Batch 3: use Vitest; serve the new client at /app with legacy root retained; migrate profiles/plans to versioned IndexedDB without passwords; retain old keys through coexistence and remove them at verified cutover. Extend the legacy journey to plan creation. Report resource footprint (dependencies, bundle, disk, peak build memory).
 - Codex reviews both static design directions before owner review.
+
+## 2026-10-14 — `codex/05-design-review.md`
+
+- Both static directions meet the design-system structure and have no token-level AA contrast failures in the tested pairs (lowest 4.78:1).
+- Required before owner review: comparable desktop views for the core flows; correct the today completion count; fix Albanian gender agreement and imperative copy; day chips at least 44 px with button semantics; two phrasing edits; the removed-session notice in the approved wording. (All applied; Codex asked for no further review round.)
+- Ask the owner alongside the choice: direction A or B; default theme light or dark; product name Orari or StudyFlow; local profile without password (with export/import) or real accounts.
+- No broad UI implementation before the owner selects a direction.

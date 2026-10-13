@@ -195,7 +195,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, a:focus-visib
 .field .error { color: var(--bad); font-size: 13px; font-weight: 600; }
 .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .chips { display: flex; flex-wrap: wrap; gap: 6px; }
-.chip { min-height: 36px; padding: 0 12px; display: inline-flex; align-items: center; border-radius: var(--radius-pill); border: 1px solid var(--line); background: var(--raised); font: 600 13px var(--font-text); color: var(--text); }
+.chip { min-height: var(--tap); min-width: var(--tap); padding: 0 14px; justify-content: center; cursor: pointer; display: inline-flex; align-items: center; border-radius: var(--radius-pill); border: 1px solid var(--line); background: var(--raised); font: 600 13px var(--font-text); color: var(--text); }
 .chip[aria-pressed="true"] { background: var(--accent-wash); color: var(--accent); border-color: transparent; }
 .understood { display: flex; flex-direction: column; gap: 8px; }
 .understood .item { display: flex; justify-content: space-between; gap: 12px; align-items: center; padding: 10px 12px; border-radius: var(--radius-m); background: var(--sunk); }
@@ -223,6 +223,11 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, a:focus-visib
 .desk .head { display: flex; flex-wrap: wrap; gap: 12px; justify-content: space-between; align-items: center; padding: 18px 22px; border-bottom: 1px solid var(--line); }
 .desk .tabs { display: flex; gap: 22px; font: 600 14px var(--font-text); color: var(--muted); }
 .desk .tabs b { color: var(--accent); }
+.cols { display: grid; grid-template-columns: repeat(var(--n, 3), minmax(0, 1fr)); gap: 32px; padding: 28px 28px 32px; align-items: start; }
+.cols > div { display: flex; flex-direction: column; gap: var(--space-5); min-width: 0; }
+.desk[data-narrow] .cols { grid-template-columns: minmax(0, 520px); justify-content: center; }
+.desk[data-narrow] .empty { padding: var(--space-8) 0; }
+@media (max-width: 900px) { .cols { grid-template-columns: 1fr; } }
 .grid { display: grid; grid-template-columns: repeat(7, minmax(120px, 1fr)); gap: 10px; padding: 18px 22px 24px; overflow-x: auto; }
 .col { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
 .col > header { font: 600 13px var(--font-text); color: var(--muted); padding-bottom: 6px; }
