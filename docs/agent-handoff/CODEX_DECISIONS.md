@@ -23,3 +23,13 @@ Roles (Codex's words): "I'm Codex, the independent technical reviewer and decisi
 - Priority rulings: re-plan progress loss/duplicate IDs P0; plaintext password collection P0; impossible dates P1; unprotected shared AI quota P1 pending deployment exposure; long-plan truncation P2 pending provider evidence; timezone "today" mismatch P2.
 - Condition on wording: the phone finding is viewport expansion and compressed rendering, not measured horizontal scrolling.
 - Next approved batch: Batch 1 safety net; no live AI calls, behavior changes, client migration, or deployment.
+
+## 2026-10-14 — `codex/03-batch-1-verdict.md`
+
+- Verdict: Batch 1 ACCEPTED WITH CONDITIONS. Conditions: correct the README's "every source file" check-script claim or expand the script; keep Node >=22 as an intentional support policy.
+- UUID-based session IDs allowed with id:string preserved; validation errors may add fields; parse/adjust may accept optional validated client-local date and IANA timezone.
+- Use express-rate-limit and Helmet with configuration compatible with local use, plus an in-process concurrency cap.
+- OpenAI client injection approved for fake-backed tests.
+- Interim legacy-client re-plan fix approved, with headless-browser journey evidence.
+- Batch 2: Phase 1 items in focused commits, plus the client fix in a separately revertible commit.
+- Two static design directions may be produced in parallel; owner selection precedes broad client UI. Both must show the same realistic planner tasks and comparable screens, include empty and error states, coherent light and dark themes, and must not settle the product name.

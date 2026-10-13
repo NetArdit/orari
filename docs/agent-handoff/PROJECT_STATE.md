@@ -18,7 +18,7 @@ Node 24.20, Express 5.2.1 (app built by `createApp` in `lib/app.js`), zod 3.25.7
 Local repository, branch `main`, no remote. Baseline of the untouched project: `b68ef0e`.
 
 ## Gate
-Batch 0 ACCEPTED WITH CONDITIONS by Codex. Batch 1 (safety net) delivered, awaiting Codex's verdict. No user-visible behaviour changed so far.
+Batch 0 and Batch 1 ACCEPTED WITH CONDITIONS by Codex (conditions met). Batch 2 (ten correctness and reliability items) delivered, awaiting Codex's verdict. Two static design directions for the owner are in progress.
 
 ## Approved direction (Codex, 2026-10-14)
 - `client/` with Vite, React, Tailwind, strict TypeScript, types inferred from the Zod schemas; Express, API contracts and business rules stay; new client built beside the old one after the safety net, one cutover after parity and storage migration.
@@ -28,7 +28,13 @@ Batch 0 ACCEPTED WITH CONDITIONS by Codex. Batch 1 (safety net) delivered, await
 - Two static visual directions for the owner to choose from, before broad client UI.
 
 ## Verification available
-`npm test`: 84 tests (node:test, no dependencies), 16 of them pin known defects by name. `npm run check`: syntax. `npm audit`: 0 vulnerabilities. Browser baseline script: `docs/agent-handoff/evidence/batch-0/browser-baseline.mjs`. Frontend logic and the model fallback loop in `lib/ai.js` have no automated tests yet.
+`npm test`: 134 tests (node:test), none pinning a known defect any more; the model walk, repair loop, deadline and cancellation in `lib/ai.js` are covered against a fake client. `npm run check`: syntax of application files. `npm audit`: 0 vulnerabilities. Browser scripts (headless Edge, no dependencies): `docs/agent-handoff/evidence/batch-0/browser-baseline.mjs` (21 screens, keyboard, corrupted storage) and `docs/agent-handoff/evidence/batch-2/replan-journey.mjs` (re-plan and parse request on the old page, 14 checks). The old page's script has no unit tests. Nothing AI-backed has ever been run live.
+
+## Fixed in Batch 2
+Impossible dates; duplicate session ids; overlapping and too-short sessions; misleading "adjusted" warning and empty plans; overnight commitments on the wrong day; `9:00` rejected and silent validation errors; minutes-long requests with no deadline; unprotected AI quota and missing security headers; server-clock "today"; re-plan on the old page (it saved nothing, and its merge rule would have deleted today's completed sessions).
+
+## Still open from the audit
+P0-2 plaintext passwords and fake login (goes with the local-profile redesign); P1-7 AI-read availability not editable; P1-8 clarifying questions dead end; P1-9 no plan management or backup; P1-10 fragile storage; P1-11 accessibility; P1-12 alert() feedback; P1-15 phone layout; P1-2 long plans (unmeasured); all P2 and P3 items.
 
 ## Owner inputs
 - 2026-10-14: wants study material (text, for example from a PDF) turned by AI into flashcards and quizzes for exam preparation. Codex ruled it in as Phase 4.
