@@ -26,6 +26,7 @@ function start(options = {}) {
             return fake.plan(...args);
         },
         now: () => FIXED_NOW,
+        rateLimit: { windowMs: 60_000, limit: 100_000 }, // out of the way unless a test sets its own
         ...options,
     });
     return new Promise((resolve) => {
@@ -110,6 +111,91 @@ describe("health, static files and generic errors", () => {
         const { status, json } = await post(base, "/api/parse", { text: "a".repeat(150_000) });
         assert.equal(status, 413);
         assert.deepEqual(json, { error: "Kërkesa është shumë e madhe." });
+    });
+});
+
+describe("P2-11: security headers", () => {
+    test("pages and API answers carry the headers, and Express does not announce itself", async () => {
+        for (const path of ["/", "/api/health", "/api/nope"]) {
+            const res = await fetch(base + path);
+            const csp = res.headers.get("content-security-policy");
+            assert.match(csp, /default-src 'self'/, path);
+            assert.match(csp, /script-src 'self'(;|$)/, path);
+            assert.match(csp, /frame-ancestors 'none'/, path);
+            assert.equal(res.headers.get("x-content-type-options"), "nosniff", path);
+            assert.equal(res.headers.get("x-powered-by"), null, path);
+        }
+    });
+
+    test("the policy allows what the page loads: its own files and Google Fonts", async () => {
+        const csp = (await fetch(base + "/")).headers.get("content-security-policy");
+        assert.match(csp, /style-src 'self' 'unsafe-inline' https:\/\/fonts\.googleapis\.com/);
+        assert.match(csp, /font-src 'self' https:\/\/fonts\.gstatic\.com/);
+        assert.match(csp, /connect-src 'self'/);
+    });
+
+    test("nothing forces HTTPS, so http://localhost keeps working", async () => {
+        const res = await fetch(base + "/");
+        assert.equal(res.headers.get("strict-transport-security"), null);
+        assert.doesNotMatch(res.headers.get("content-security-policy"), /upgrade-insecure-requests/);
+    });
+});
+
+describe("P0-5: protecting the shared AI quota", () => {
+    test("a client over its limit gets 429 on every AI route, the AI is not called, other routes still answer", async () => {
+        const limited = await start({ rateLimit: { windowMs: 60_000, limit: 2 } });
+        try {
+            assert.equal((await post(limited.base, "/api/parse", { text: "abc def" })).status, 200);
+            assert.equal((await post(limited.base, "/api/create-plan", {})).status, 400); // invalid requests count too
+            const callsBefore = fake.parseCalls.length + fake.planCalls.length;
+
+            for (const path of ["/api/parse", "/api/create-plan", "/api/adjust-plan"]) {
+                const res = await fetch(limited.base + path, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text: "abc def" }) });
+                assert.equal(res.status, 429, path);
+                assert.deepEqual(await res.json(), { error: "Ke bërë shumë kërkesa njëra pas tjetrës. Prit pak minuta dhe provo përsëri." });
+                assert.ok(res.headers.get("retry-after"), "says when to come back");
+            }
+
+            assert.equal(fake.parseCalls.length + fake.planCalls.length, callsBefore);
+            assert.equal((await fetch(limited.base + "/api/health")).status, 200);
+            assert.equal((await fetch(limited.base + "/")).status, 200);
+        } finally {
+            await stop(limited.server);
+        }
+    });
+
+    test("only so many AI requests are worked on at once; the next gets 503 and a slot frees when one ends", async () => {
+        const capped = await start({ maxConcurrentAi: 1 });
+        let finishFirst;
+        fake.parse = () => new Promise((resolve) => { finishFirst = () => resolve({ ok: true, data: {} }); });
+        try {
+            const first = post(capped.base, "/api/parse", { text: "abc def" });
+            while (fake.parseCalls.length === 0) await new Promise((r) => setTimeout(r, 5));
+
+            const second = await fetch(capped.base + "/api/parse", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text: "abc def" }) });
+            assert.equal(second.status, 503);
+            assert.equal(second.headers.get("retry-after"), "15");
+            assert.deepEqual(await second.json(), { error: "Shërbimi është i zënë për momentin. Provo përsëri pas pak." });
+            assert.equal(fake.parseCalls.length, 1);
+
+            finishFirst();
+            assert.equal((await first).status, 200);
+
+            fake.parse = async () => ({ ok: true, data: {} });
+            assert.equal((await post(capped.base, "/api/parse", { text: "abc def" })).status, 200);
+        } finally {
+            await stop(capped.server);
+        }
+    });
+
+    test("a request that fails validation gives its slot back", async () => {
+        const capped = await start({ maxConcurrentAi: 1 });
+        try {
+            assert.equal((await post(capped.base, "/api/parse", {})).status, 400);
+            assert.equal((await post(capped.base, "/api/parse", { text: "abc def" })).status, 200);
+        } finally {
+            await stop(capped.server);
+        }
     });
 });
 

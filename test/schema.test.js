@@ -5,6 +5,7 @@ import {
     ParsedRequestSchema,
     PlanResponseSchema,
     fieldErrors,
+    LIMITS,
     ParseRequestBody,
     CreatePlanBody,
     AdjustPlanBody,
@@ -225,10 +226,37 @@ describe("AdjustPlanBody", () => {
     });
 });
 
-describe("KNOWN DEFECTS, to be reversed in Phase 1", () => {
-    test("KNOWN DEFECT P0-5: the number of commitments is unbounded", () => {
-        const body = minimalCreate();
-        body.structured.commitments = Array.from({ length: 5000 }, () => ({ label: "a", start: "09:00", end: "10:00" }));
-        assert.equal(ok(CreatePlanBody, body), true);
+describe("P0-5: list sizes are bounded", () => {
+    const commitment = { label: "a", start: "09:00", end: "10:00" };
+    const window = { start: "09:00", end: "10:00" };
+    const withStructured = (extra) => ok(CreatePlanBody, { ...minimalCreate(), structured: { ...minimalCreate().structured, ...extra } });
+
+    test("the limits are the documented ones", () => {
+        assert.deepEqual(LIMITS, { windowsPerDay: 8, commitments: 40, datesPerCommitment: 60, unavailableDates: 180, sessions: 600 });
+    });
+
+    test("each list is accepted at its limit and refused one over", () => {
+        assert.equal(withStructured({ commitments: Array(40).fill(commitment) }), true);
+        assert.equal(withStructured({ commitments: Array(41).fill(commitment) }), false);
+
+        assert.equal(withStructured({ weeklyAvailability: [{ day: "mon", windows: Array(8).fill(window) }] }), true);
+        assert.equal(withStructured({ weeklyAvailability: [{ day: "mon", windows: Array(9).fill(window) }] }), false);
+
+        assert.equal(withStructured({ weeklyAvailability: Array(7).fill({ day: "mon" }) }), true);
+        assert.equal(withStructured({ weeklyAvailability: Array(8).fill({ day: "mon" }) }), false);
+
+        assert.equal(withStructured({ unavailableDates: Array(180).fill("2026-10-14") }), true);
+        assert.equal(withStructured({ unavailableDates: Array(181).fill("2026-10-14") }), false);
+
+        assert.equal(withStructured({ commitments: [{ ...commitment, dates: Array(60).fill("2026-10-14") }] }), true);
+        assert.equal(withStructured({ commitments: [{ ...commitment, dates: Array(61).fill("2026-10-14") }] }), false);
+        assert.equal(withStructured({ commitments: [{ ...commitment, days: Array(8).fill("mon") }] }), false);
+    });
+
+    test("the AI's answers are bounded too", () => {
+        const session = { date: "2026-10-14", startTime: "08:00", endTime: "09:00", type: "learning", title: "x" };
+        assert.equal(ok(PlanResponseSchema, { sessions: Array(600).fill(session) }), true);
+        assert.equal(ok(PlanResponseSchema, { sessions: Array(601).fill(session) }), false);
+        assert.equal(ok(ParsedRequestSchema, { commitments: Array(41).fill(commitment) }), false);
     });
 });
