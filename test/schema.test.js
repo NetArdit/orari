@@ -27,6 +27,19 @@ describe("ParseRequestBody", () => {
         assert.equal(ok(ParseRequestBody, {}), false);
         assert.equal(ok(ParseRequestBody, { text: 5 }), false);
     });
+
+    test("P1-13: the client's date and time zone are optional and validated", () => {
+        assert.equal(ok(ParseRequestBody, { text: "abc", clientDate: "2026-10-15", timeZone: "Europe/Belgrade" }), true);
+        assert.equal(ok(ParseRequestBody, { text: "abc", clientDate: "2026-10-15" }), true);
+        assert.equal(ok(ParseRequestBody, { text: "abc", timeZone: "Europe/Belgrade" }), true);
+        assert.equal(ok(ParseRequestBody, { text: "abc", clientDate: "2026-02-31" }), false);
+        assert.equal(ok(ParseRequestBody, { text: "abc", clientDate: "neser" }), false);
+        assert.equal(ok(ParseRequestBody, { text: "abc", timeZone: "Prishtina" }), false);
+        assert.equal(ok(ParseRequestBody, { text: "abc", timeZone: "E".repeat(65) }), false);
+        assert.deepEqual(fieldErrors(ParseRequestBody.safeParse({ text: "abc", timeZone: "Prishtina" }).error), [
+            { path: "timeZone", message: "Zona kohore nuk njihet." },
+        ]);
+    });
 });
 
 describe("ParsedRequestSchema (what the model returns for free text)", () => {

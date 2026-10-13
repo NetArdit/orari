@@ -526,7 +526,12 @@ document.getElementById("parseButton").addEventListener("click", async () => {
         const response = await fetch("/api/parse", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ text })
+            body: JSON.stringify({
+                text,
+                // "Today" and "tomorrow" must mean the user's day, not the server's.
+                clientDate: todayStr(),
+                timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone
+            })
         });
 
         const result = await response.json();

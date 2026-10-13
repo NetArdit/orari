@@ -6,6 +6,8 @@ import {
     minutesToTime,
     isValidDateStr,
     weekdayOf,
+    isValidTimeZone,
+    localDateInZone,
     dateRange,
     buildFreeWindowsForDate,
     buildCalendar,
@@ -57,6 +59,24 @@ describe("time helpers", () => {
         assert.equal(isValidDateStr("14-10-2026"), false);
         assert.equal(isValidDateStr("2026-10-14T00:00"), false);
         assert.equal(isValidDateStr(null), false);
+    });
+
+    test("P1-13: the local date depends on the time zone, across midnight and summer time", () => {
+        const lateEvening = new Date("2026-10-14T22:30:00Z"); // 00:30 on the 15th in Prishtina (UTC+2 in October)
+        assert.equal(localDateInZone("Europe/Belgrade", lateEvening), "2026-10-15");
+        assert.equal(localDateInZone("UTC", lateEvening), "2026-10-14");
+        assert.equal(localDateInZone("America/New_York", lateEvening), "2026-10-14");
+        assert.equal(localDateInZone("Pacific/Kiritimati", lateEvening), "2026-10-15");
+
+        const winter = new Date("2026-01-14T23:30:00Z"); // UTC+1 in January: 00:30 on the 15th
+        assert.equal(localDateInZone("Europe/Belgrade", winter), "2026-01-15");
+        const winterEarlier = new Date("2026-01-14T22:30:00Z"); // 23:30 on the 14th
+        assert.equal(localDateInZone("Europe/Belgrade", winterEarlier), "2026-01-14");
+    });
+
+    test("isValidTimeZone accepts IANA names and rejects everything else", () => {
+        for (const zone of ["Europe/Belgrade", "Europe/Tirane", "UTC", "America/New_York"]) assert.equal(isValidTimeZone(zone), true, zone);
+        for (const zone of ["Prishtina", "Europe/Nowhere", "", null, 2, "<script>"]) assert.equal(isValidTimeZone(zone), false, String(zone));
     });
 
     test("dateRange is inclusive, crosses months and years, and is empty when reversed", () => {

@@ -234,6 +234,29 @@ describe("POST /api/parse", () => {
         assert.ok(options.signal instanceof AbortSignal);
     });
 
+    test("P1-13: the AI is given the person's own date when the client sends it", async () => {
+        await post(base, "/api/parse", { text: "nesër kam provim", clientDate: "2026-10-15", timeZone: "Europe/Belgrade" });
+        assert.equal(fake.parseCalls[0][1], "2026-10-15");
+    });
+
+    test("P1-13: with only a time zone, today is worked out for that zone", async () => {
+        // The fixed clock is 2026-10-14 10:00 UTC: already the 15th on Kiritimati (UTC+14), still the 14th in Prishtina.
+        await post(base, "/api/parse", { text: "nesër kam provim", timeZone: "Pacific/Kiritimati" });
+        await post(base, "/api/parse", { text: "nesër kam provim", timeZone: "Europe/Belgrade" });
+        assert.deepEqual(fake.parseCalls.map((call) => call[1]), ["2026-10-15", "2026-10-14"]);
+    });
+
+    test("P1-13: an unknown time zone or an impossible date is refused and names the field", async () => {
+        let res = await post(base, "/api/parse", { text: "abc def", timeZone: "Prishtina" });
+        assert.equal(res.status, 400);
+        assert.deepEqual(res.json.fields, [{ path: "timeZone", message: "Zona kohore nuk njihet." }]);
+
+        res = await post(base, "/api/parse", { text: "abc def", clientDate: "2026-02-31" });
+        assert.equal(res.status, 400);
+        assert.deepEqual(res.json.fields, [{ path: "clientDate", message: "Data nuk është e vlefshme." }]);
+        assert.equal(fake.parseCalls.length, 0);
+    });
+
     test("invalid bodies answer 400 without calling the AI", async () => {
         for (const body of [{}, { text: "ab" }, { text: "a".repeat(2001) }, { text: 5 }]) {
             const { status, json } = await post(base, "/api/parse", body);

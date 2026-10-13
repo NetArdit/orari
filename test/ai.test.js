@@ -116,6 +116,12 @@ describe("a clean answer", () => {
         assert.equal(user.content, "Du me msu JavaScript");
     });
 
+    test("P1-13: given the person's date as text, the weekday is computed from that date, not from the server's clock", async () => {
+        const { ai, calls } = build([reply(JSON.stringify({ subject: "JavaScript" }))]);
+        await ai.parseNaturalLanguageRequest("Du me msu JavaScript", "2026-10-18");
+        assert.match(calls[0].params.messages[0].content, /Sot është 2026-10-18 \(Sunday\)/);
+    });
+
     test("JSON wrapped in a code fence or in prose is still read", async () => {
         const { ai } = build([reply("Ja plani:\n```json\n" + VALID_PLAN + "\n```")]);
         assert.equal((await ai.generateStudyPlan(PLAN_INPUT)).ok, true);
