@@ -230,7 +230,7 @@ describe("POST /api/create-plan", () => {
         assert.equal(status, 200);
         assert.deepEqual(json.sessions.map((s) => s.startTime), ["08:00"]);
         assert.deepEqual(json.stats, { totalSessions: 1, totalMinutes: 60, totalHours: 1 });
-        assert.deepEqual(json.warnings, ["Kujdes", "Disa sesione u rregulluan për t'iu përshtatur kohës së lirë."]);
+        assert.deepEqual(json.warnings, ["Kujdes", "2 sesione që propozoi AI u hoqën sepse nuk përshtateshin me kohën tënde të lirë."]);
     });
 
     test("P1-3: sessions come back in time order, without overlaps and without slivers", async () => {
@@ -286,6 +286,19 @@ describe("POST /api/create-plan", () => {
         assert.equal(status, 400);
         assert.deepEqual(json, { error: "Nuk gjenden dritare kohore të lira në periudhën e zgjedhur. Kontrollo disponueshmërinë dhe angazhimet." });
         assert.equal(fake.planCalls.length, 0);
+    });
+
+    test("P1-4: when no proposed session is usable the answer is an error, not an empty plan", async () => {
+        fake.plan = async () => ({ ok: true, data: planData([planSession("2026-10-14", "03:00", "04:00")]) });
+        const { status, json } = await post(base, "/api/create-plan", createBody());
+        assert.equal(status, 502);
+        assert.deepEqual(json, { error: "AI nuk arriti të vendosë asnjë sesion brenda kohës sate të lirë. Provo përsëri." });
+    });
+
+    test("P1-4: one removed session is reported in the singular", async () => {
+        fake.plan = async () => ({ ok: true, data: planData([planSession("2026-10-14", "03:00", "04:00"), planSession("2026-10-14", "08:00", "09:00")], { warnings: [] }) });
+        const { json } = await post(base, "/api/create-plan", createBody());
+        assert.deepEqual(json.warnings, ["1 sesion që propozoi AI u hoq sepse nuk përshtatej me kohën tënde të lirë."]);
     });
 
     test("an unusable AI answer gives 502; a provider error is mapped", async () => {
@@ -354,6 +367,40 @@ describe("POST /api/adjust-plan", () => {
         assert.equal(fake.planCalls.length, 0);
     });
 
+    test("P1-4: removed sessions are reported on adjust too, and an empty result is an error", async () => {
+        fake.plan = async () => ({ ok: true, data: planData([planSession("2026-10-15", "03:00", "04:00"), planSession("2026-10-15", "08:00", "09:00")]) });
+        let res = await post(base, "/api/adjust-plan", adjustBody());
+        assert.equal(res.status, 200);
+        assert.deepEqual(res.json.warnings, ["Kujdes", "1 sesion që propozoi AI u hoq sepse nuk përshtatej me kohën tënde të lirë."]);
+
+        fake.plan = async () => ({ ok: true, data: planData([planSession("2026-10-15", "03:00", "04:00")]) });
+        res = await post(base, "/api/adjust-plan", adjustBody());
+        assert.equal(res.status, 502);
+        assert.deepEqual(res.json, { error: "AI nuk arriti të vendosë asnjë sesion brenda kohës sate të lirë. Provo përsëri." });
+    });
+
+    test("P1-4: with no free time left, adjust answers 400 and does not call the AI", async () => {
+        const body = adjustBody({}, { weeklyAvailability: [{ day: "thu", off: true }, { day: "fri", off: true }] });
+        const { status, json } = await post(base, "/api/adjust-plan", body);
+        assert.equal(status, 400);
+        assert.deepEqual(json, { error: "Nuk ka mbetur kohë e lirë deri në fund të planit. Krijo një plan të ri me afat më të gjatë ose me më shumë kohë të lirë." });
+        assert.equal(fake.planCalls.length, 0);
+    });
+
+    test("P1-4: a plan whose end date has passed gets its own message", async () => {
+        const { status, json } = await post(base, "/api/adjust-plan", adjustBody({ today: "2026-10-17" }));
+        assert.equal(status, 400);
+        assert.deepEqual(json, { error: "Ky plan ka përfunduar, nuk ka më ditë për t'u rregulluar. Krijo një plan të ri." });
+        assert.equal(fake.planCalls.length, 0);
+    });
+
+    test("the last day of a plan can still be adjusted", async () => {
+        fake.plan = async () => ({ ok: true, data: planData([planSession("2026-10-16", "08:00", "09:00")]) });
+        const { status, json } = await post(base, "/api/adjust-plan", adjustBody({ today: "2026-10-16" }));
+        assert.equal(status, 200);
+        assert.equal(json.sessions.length, 1);
+    });
+
     test("an unusable AI answer gives 502; a provider error is mapped", async () => {
         fake.plan = async () => ({ ok: false, error: "insufficient_extraction" });
         let res = await post(base, "/api/adjust-plan", adjustBody());
@@ -378,37 +425,4 @@ describe("logging", () => {
 });
 
 describe("KNOWN DEFECTS, to be reversed in Phase 1", () => {
-    test("KNOWN DEFECT P1-4: when every session is dropped, create-plan still answers 200 with an empty plan", async () => {
-        fake.plan = async () => ({ ok: true, data: planData([planSession("2026-10-14", "03:00", "04:00")]) });
-        const { status, json } = await post(base, "/api/create-plan", createBody());
-        assert.equal(status, 200);
-        assert.deepEqual(json.sessions, []);
-        assert.deepEqual(json.stats, { totalSessions: 0, totalMinutes: 0, totalHours: 0 });
-    });
-
-    test("KNOWN DEFECT P1-4: adjust-plan drops sessions without telling the user, and accepts an empty result", async () => {
-        fake.plan = async () => ({ ok: true, data: planData([planSession("2026-10-15", "03:00", "04:00")]) });
-        const body = { ...createBody({ startDate: "2026-10-10", endDate: "2026-10-16" }), progress: { today: "2026-10-15" } };
-        const { status, json } = await post(base, "/api/adjust-plan", body);
-        assert.equal(status, 200);
-        assert.deepEqual(json.sessions, []);
-        assert.deepEqual(json.warnings, ["Kujdes"]);
-    });
-
-    test("KNOWN DEFECT P1-4: adjust-plan calls the AI even when no free time is left", async () => {
-        const body = {
-            ...createBody({ startDate: "2026-10-10", endDate: "2026-10-16", weeklyAvailability: [{ day: "thu", off: true }, { day: "fri", off: true }] }),
-            progress: { today: "2026-10-15" },
-        };
-        await post(base, "/api/adjust-plan", body);
-        assert.equal(fake.planCalls.length, 1);
-        assert.equal(fake.planCalls[0][0].calendar.every((d) => d.windows.length === 0), true);
-    });
-
-    test("KNOWN DEFECT P1-6: a finished plan is refused with a message about the start date", async () => {
-        const body = { ...createBody({ startDate: "2026-10-01", endDate: "2026-10-05" }), progress: { today: "2026-10-14" } };
-        const { status, json } = await post(base, "/api/adjust-plan", body);
-        assert.equal(status, 400);
-        assert.deepEqual(json, { error: "Data e fillimit duhet të jetë para datës së mbarimit." });
-    });
 });
