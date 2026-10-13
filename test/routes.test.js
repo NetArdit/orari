@@ -36,6 +36,15 @@ function start(options = {}) {
 
 const stop = (server) => new Promise((resolve) => server.close(resolve));
 
+// Waits for something that should happen soon; fails the test instead of hanging if it never does.
+async function until(condition, what, timeoutMs = 3000) {
+    const startedAt = Date.now();
+    while (!condition()) {
+        if (Date.now() - startedAt > timeoutMs) assert.fail(`timed out waiting for ${what}`);
+        await new Promise((r) => setTimeout(r, 5));
+    }
+}
+
 async function post(base, path, body, raw = false) {
     const res = await fetch(base + path, {
         method: "POST",
@@ -170,7 +179,7 @@ describe("P0-5: protecting the shared AI quota", () => {
         fake.parse = () => new Promise((resolve) => { finishFirst = () => resolve({ ok: true, data: {} }); });
         try {
             const first = post(capped.base, "/api/parse", { text: "abc def" });
-            while (fake.parseCalls.length === 0) await new Promise((r) => setTimeout(r, 5));
+            await until(() => fake.parseCalls.length > 0, "the first request to reach the AI");
 
             const second = await fetch(capped.base + "/api/parse", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text: "abc def" }) });
             assert.equal(second.status, 503);
@@ -326,12 +335,12 @@ describe("P1-1: deadline and cancellation", () => {
                 signal: browser.signal,
             }).catch((error) => error.name);
 
-            while (!seenSignal) await new Promise((r) => setTimeout(r, 5));
+            await until(() => seenSignal, "the request to reach the AI");
             assert.equal(seenSignal.aborted, false);
 
             browser.abort();
             assert.equal(await pending, "AbortError");
-            while (!seenSignal.aborted) await new Promise((r) => setTimeout(r, 5));
+            await until(() => seenSignal.aborted, "the AI work to be told to stop");
 
             // The only slot must be free again for the next request.
             fake.plan = async () => ({ ok: true, data: planData([planSession("2026-10-14", "08:00", "09:00")]) });

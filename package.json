@@ -6,7 +6,7 @@
   "scripts": {
     "start": "node server.js",
     "dev": "node --watch server.js",
-    "test": "node --test",
+    "test": "node --test --test-timeout=30000",
     "check": "node --check server.js && node --check lib/app.js && node --check lib/plan.js && node --check lib/ai.js && node --check lib/schema.js && node --check lib/time.js && node --check public/script.js"
   },
   "dependencies": {
