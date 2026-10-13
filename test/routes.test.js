@@ -228,7 +228,10 @@ describe("POST /api/parse", () => {
 
         assert.equal(status, 200);
         assert.deepEqual(json, { parsed });
-        assert.deepEqual(fake.parseCalls, [["Du me msu JavaScript", FIXED_NOW]]);
+        assert.equal(fake.parseCalls.length, 1);
+        const [text, today, options] = fake.parseCalls[0];
+        assert.deepEqual([text, today], ["Du me msu JavaScript", FIXED_NOW]);
+        assert.ok(options.signal instanceof AbortSignal);
     });
 
     test("invalid bodies answer 400 without calling the AI", async () => {
@@ -265,6 +268,70 @@ describe("POST /api/parse", () => {
             assert.equal(status, expectedStatus, String(providerStatus));
             assert.deepEqual(json, { error: expectedMessage }, String(providerStatus));
         }
+    });
+});
+
+describe("P1-1: deadline and cancellation", () => {
+    test("when the AI runs out of time every AI route answers 504 with its own message", async () => {
+        const late = async () => {
+            throw Object.assign(new Error("ai_deadline_exceeded"), { code: "AI_DEADLINE" });
+        };
+        fake.parse = late;
+        fake.plan = late;
+        const adjust = { ...createBody({ startDate: "2026-10-10", endDate: "2026-10-16" }), progress: { today: "2026-10-15" } };
+        for (const [path, body] of [["/api/parse", { text: "abc def" }], ["/api/create-plan", createBody()], ["/api/adjust-plan", adjust]]) {
+            const { status, json } = await post(base, path, body);
+            assert.equal(status, 504, path);
+            assert.deepEqual(json, { error: "AI po vonon më shumë se zakonisht. Provo përsëri pas pak." }, path);
+        }
+    });
+
+    test("when the browser cancels, the AI work is told to stop and its slot is freed", async () => {
+        const capped = await start({ maxConcurrentAi: 1 });
+        let seenSignal;
+        fake.plan = (input, { signal }) =>
+            new Promise((resolve, reject) => {
+                seenSignal = signal;
+                signal.addEventListener("abort", () => reject(Object.assign(new Error("ai_request_aborted"), { code: "AI_ABORTED" })));
+            });
+        try {
+            const browser = new AbortController();
+            const pending = fetch(capped.base + "/api/create-plan", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(createBody()),
+                signal: browser.signal,
+            }).catch((error) => error.name);
+
+            while (!seenSignal) await new Promise((r) => setTimeout(r, 5));
+            assert.equal(seenSignal.aborted, false);
+
+            browser.abort();
+            assert.equal(await pending, "AbortError");
+            while (!seenSignal.aborted) await new Promise((r) => setTimeout(r, 5));
+
+            // The only slot must be free again for the next request.
+            fake.plan = async () => ({ ok: true, data: planData([planSession("2026-10-14", "08:00", "09:00")]) });
+            let status;
+            for (let i = 0; i < 50 && status !== 200; i++) {
+                status = (await post(capped.base, "/api/create-plan", createBody())).status;
+                if (status !== 200) await new Promise((r) => setTimeout(r, 10));
+            }
+            assert.equal(status, 200);
+        } finally {
+            await stop(capped.server);
+        }
+    });
+
+    test("a request that finishes normally does not abort its signal", async () => {
+        let seenSignal;
+        fake.parse = async (text, today, { signal }) => {
+            seenSignal = signal;
+            return { ok: true, data: {} };
+        };
+        await post(base, "/api/parse", { text: "abc def" });
+        await new Promise((r) => setTimeout(r, 30));
+        assert.equal(seenSignal.aborted, false);
     });
 });
 
