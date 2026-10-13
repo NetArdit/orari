@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 import {
     ParsedRequestSchema,
     PlanResponseSchema,
+    fieldErrors,
     ParseRequestBody,
     CreatePlanBody,
     AdjustPlanBody,
@@ -123,15 +124,39 @@ describe("CreatePlanBody", () => {
         assert.equal(withLength(45.5), false);
     });
 
-    test("times must be zero-padded HH:MM", () => {
-        const withWindow = (start, end) => {
-            const body = minimalCreate();
-            body.structured.weeklyAvailability = [{ day: "mon", windows: [{ start, end }] }];
-            return ok(CreatePlanBody, body);
-        };
-        assert.equal(withWindow("09:00", "10:00"), true);
-        assert.equal(withWindow("9:00", "10:00"), false);
-        assert.equal(withWindow("09:00", "24:00"), false);
+    const withWindow = (start, end) => {
+        const body = minimalCreate();
+        body.structured.weeklyAvailability = [{ day: "mon", windows: [{ start, end }] }];
+        return CreatePlanBody.safeParse(body);
+    };
+
+    test("P1-6: one-digit hours are accepted and stored zero-padded", () => {
+        const parsed = withWindow(" 9:00", "10:30 ");
+        assert.equal(parsed.success, true);
+        assert.deepEqual(parsed.data.structured.weeklyAvailability[0].windows, [{ start: "09:00", end: "10:30" }]);
+
+        const body = minimalCreate();
+        body.structured.commitments = [{ label: "Punë", start: "8:00", end: "16:00" }];
+        assert.deepEqual(
+            CreatePlanBody.parse(body).structured.commitments.map((c) => [c.start, c.end]),
+            [["08:00", "16:00"]]
+        );
+    });
+
+    test("times that are not times are rejected", () => {
+        for (const bad of ["24:00", "09:60", "9", "09.00", "nine", ""]) {
+            assert.equal(withWindow(bad, "23:00").success, false, bad);
+        }
+    });
+
+    test("P1-6: a free window must end after it starts; a commitment may cross midnight", () => {
+        assert.equal(withWindow("20:00", "08:00").success, false);
+        assert.equal(withWindow("9:00", "09:00").success, false);
+        assert.equal(withWindow("9:00", "10:00").success, true);
+
+        const body = minimalCreate();
+        body.structured.commitments = [{ label: "Ndërrimi i natës", start: "22:00", end: "06:00" }];
+        assert.equal(ok(CreatePlanBody, body), true);
     });
 
     test("dates that do not exist are rejected everywhere a date is accepted", () => {
@@ -153,6 +178,38 @@ describe("CreatePlanBody", () => {
         body.structured.extra = "x";
         const parsed = CreatePlanBody.parse(body);
         assert.equal("extra" in parsed.structured, false);
+    });
+});
+
+describe("fieldErrors", () => {
+    const errorsFor = (schema, value) => fieldErrors(schema.safeParse(value).error);
+
+    test("names each field with an Albanian message", () => {
+        const body = minimalCreate();
+        delete body.structured.subject;
+        body.structured.startDate = "2026-02-31";
+        body.structured.weeklyAvailability = [{ day: "mon", windows: [{ start: "20:00", end: "08:00" }, { start: "abc", end: "10:00" }] }];
+        body.structured.sessionPreferenceMinutes = 500;
+        body.profile.name = "";
+
+        assert.deepEqual(errorsFor(CreatePlanBody, body), [
+            { path: "profile.name", message: "Vlera është shumë e shkurtër ose shumë e vogël." },
+            { path: "structured.startDate", message: "Data nuk është e vlefshme." },
+            { path: "structured.subject", message: "Kjo fushë mungon." },
+            { path: "structured.weeklyAvailability.0.windows.0.end", message: "Ora e mbarimit duhet të jetë pas orës së fillimit." },
+            { path: "structured.weeklyAvailability.0.windows.1.start", message: "Ora duhet të shkruhet si 08:30." },
+            { path: "structured.sessionPreferenceMinutes", message: "Vlera është shumë e gjatë ose shumë e madhe." },
+        ]);
+    });
+
+    test("never passes zod's English through, and stops at ten", () => {
+        const body = minimalCreate();
+        body.structured.planMode = "holiday";
+        body.structured.unavailableDates = Array(15).fill("nope");
+        const errors = errorsFor(CreatePlanBody, body);
+        assert.equal(errors.length, 10);
+        assert.deepEqual(errors[0], { path: "structured.planMode", message: "Vlera nuk është e vlefshme." });
+        for (const e of errors) assert.doesNotMatch(e.message, /Invalid|Required|Expected/);
     });
 });
 

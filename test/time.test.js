@@ -24,6 +24,8 @@ describe("time helpers", () => {
         assert.equal(timeToMinutes("7:05"), 425);
         assert.equal(timeToMinutes("23:59"), 1439);
         assert.equal(timeToMinutes("29:00"), null);
+        assert.equal(timeToMinutes("24:00"), null);
+        assert.equal(timeToMinutes("24:30"), null);
         assert.equal(timeToMinutes("08:60"), null);
         assert.equal(timeToMinutes("abc"), null);
         assert.equal(timeToMinutes(830), null);
@@ -194,15 +196,9 @@ describe("calendar", () => {
     });
 });
 
-/* Behaviour the audit identified as wrong (docs/agent-handoff/CLAUDE_REPORT.md). These tests record what
-   the code does today so that the fix is a deliberate, visible change of the expectation. */
-describe("KNOWN DEFECTS, to be reversed in Phase 1", () => {
-    test("KNOWN DEFECT P1-6: an availability window ending before it starts becomes two windows", () => {
+describe("what the engine tolerates and the schemas refuse", () => {
+    test("an availability window ending before it starts is read as crossing midnight; the request schema rejects it first", () => {
         const reversed = [{ day: "wed", off: false, windows: [{ start: "20:00", end: "08:00" }] }];
         assert.deepEqual(windows("2026-10-14", reversed), ["07:00-08:00", "20:00-23:00"]);
-    });
-
-    test("KNOWN DEFECT P3: timeToMinutes accepts 24:30", () => {
-        assert.equal(timeToMinutes("24:30"), 1470);
     });
 });

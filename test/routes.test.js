@@ -149,7 +149,8 @@ describe("POST /api/parse", () => {
         for (const body of [{}, { text: "ab" }, { text: "a".repeat(2001) }, { text: 5 }]) {
             const { status, json } = await post(base, "/api/parse", body);
             assert.equal(status, 400);
-            assert.deepEqual(json, { error: "Përshkrimi mungon ose është shumë i gjatë/i shkurtër." });
+            assert.equal(json.error, "Përshkrimi mungon ose është shumë i gjatë/i shkurtër.");
+            assert.equal(json.fields[0].path, "text");
         }
         assert.equal(fake.parseCalls.length, 0);
     });
@@ -251,12 +252,32 @@ describe("POST /api/create-plan", () => {
     test("invalid bodies answer 400 without calling the AI", async () => {
         const missingSubject = createBody();
         delete missingSubject.structured.subject;
-        for (const body of [{}, missingSubject, createBody({ weeklyAvailability: [{ day: "mon", windows: [{ start: "9:00", end: "10:00" }] }] })]) {
+        for (const body of [{}, missingSubject, createBody({ weeklyAvailability: [{ day: "mon", windows: [{ start: "10:00", end: "09:00" }] }] })]) {
             const { status, json } = await post(base, "/api/create-plan", body);
             assert.equal(status, 400);
-            assert.deepEqual(json, { error: "Na mungojnë disa të dhëna për ta krijuar planin." });
+            assert.equal(json.error, "Na mungojnë disa të dhëna për ta krijuar planin.");
+            assert.ok(json.fields.length > 0);
         }
         assert.equal(fake.planCalls.length, 0);
+    });
+
+    test("P1-6: a validation error says which field and why", async () => {
+        const body = createBody({ weeklyAvailability: [{ day: "mon", windows: [{ start: "10:00", end: "09:00" }] }] });
+        delete body.structured.subject;
+        const { json } = await post(base, "/api/create-plan", body);
+        assert.deepEqual(json.fields, [
+            { path: "structured.subject", message: "Kjo fushë mungon." },
+            { path: "structured.weeklyAvailability.0.windows.0.end", message: "Ora e mbarimit duhet të jetë pas orës së fillimit." },
+        ]);
+    });
+
+    test("P1-6: a time typed as 9:00 is accepted and reaches the calendar as 09:00", async () => {
+        fake.plan = async () => ({ ok: true, data: planData([planSession("2026-10-14", "09:00", "10:00")]) });
+        const body = createBody({ weeklyAvailability: [{ day: "wed", windows: [{ start: "9:00", end: "10:00" }] }] });
+        const { status, json } = await post(base, "/api/create-plan", body);
+        assert.equal(status, 200);
+        assert.equal(json.sessions.length, 1);
+        assert.deepEqual(fake.planCalls[0][0].calendar[0].windows, [{ start: "09:00", end: "10:00", minutes: 60 }]);
     });
 
     test("date rules answer 400 with their own message, without calling the AI", async () => {
@@ -268,7 +289,7 @@ describe("POST /api/create-plan", () => {
         for (const [dates, message] of cases) {
             const { status, json } = await post(base, "/api/create-plan", createBody(dates));
             assert.equal(status, 400, message);
-            assert.deepEqual(json, { error: message });
+            assert.equal(json.error, message);
         }
         assert.equal(fake.planCalls.length, 0);
     });
@@ -276,7 +297,10 @@ describe("POST /api/create-plan", () => {
     test("31 February is refused and never reaches the AI", async () => {
         const { status, json } = await post(base, "/api/create-plan", createBody({ startDate: "2026-02-31", endDate: "2026-03-04" }));
         assert.equal(status, 400);
-        assert.deepEqual(json, { error: "Datat e planit nuk janë valide." });
+        assert.deepEqual(json, {
+            error: "Datat e planit nuk janë valide.",
+            fields: [{ path: "structured.startDate", message: "Data nuk është e vlefshme." }],
+        });
         assert.equal(fake.planCalls.length, 0);
     });
 
@@ -362,7 +386,8 @@ describe("POST /api/adjust-plan", () => {
         for (const body of [{}, createBody(), adjustBody({ today: "sot" })]) {
             const { status, json } = await post(base, "/api/adjust-plan", body);
             assert.equal(status, 400);
-            assert.deepEqual(json, { error: "Na mungojnë disa të dhëna për ta rregulluar planin." });
+            assert.equal(json.error, "Na mungojnë disa të dhëna për ta rregulluar planin.");
+            assert.ok(json.fields.length > 0);
         }
         assert.equal(fake.planCalls.length, 0);
     });
