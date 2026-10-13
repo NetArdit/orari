@@ -4,7 +4,7 @@ A study planner in Albanian. You describe what you have to learn, by when, and w
 
 ## Run it
 
-Needs Node.js 22 or newer.
+Needs Node.js 22 or newer (the supported minimum; older versions are not tested).
 
 ```
 npm install
@@ -31,7 +31,7 @@ Accounts, plans and progress are stored only in the browser you use (localStorag
 
 ```
 npm test         all tests (Node's built-in runner, no extra packages)
-npm run check    syntax check of every source file
+npm run check    syntax check of the application files (server, lib, public script), not of the tests
 ```
 
 The tests never call the AI provider: routes are tested against a stand-in passed to `createApp`. Tests named `KNOWN DEFECT` describe behaviour that is wrong today and is scheduled to be fixed; when a fix lands, that test's expectation is reversed in the same change.
