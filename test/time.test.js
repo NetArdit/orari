@@ -113,6 +113,33 @@ describe("free windows for one date", () => {
         assert.deepEqual(windows("2026-10-14", [], work), ["07:00-23:00"]);
     });
 
+    test("P1-5: a commitment crossing midnight blocks the evening of its day and the morning of the next", () => {
+        const sleep = { label: "Gjumë", type: "sleep", days: null, dates: null, start: "00:00", end: "06:00" };
+        const shift = { label: "Ndërrimi i natës", type: "work", days: ["mon"], dates: null, start: "20:00", end: "10:00" };
+        assert.deepEqual(windows("2026-10-11", [], [sleep, shift]), ["06:00-23:30"]); // Sunday: untouched
+        assert.deepEqual(windows("2026-10-12", [], [sleep, shift]), ["06:00-20:00"]); // Monday: free until the shift starts
+        assert.deepEqual(windows("2026-10-13", [], [sleep, shift]), ["10:00-23:30"]); // Tuesday: busy until the shift ends
+        assert.deepEqual(windows("2026-10-14", [], [sleep, shift]), ["06:00-23:30"]); // Wednesday: untouched
+    });
+
+    test("P1-5: an overnight commitment on one date spills into the next date only", () => {
+        const trip = [{ label: "Udhëtim", type: "other", days: null, dates: ["2026-10-14"], start: "21:00", end: "09:00" }];
+        assert.deepEqual(windows("2026-10-14", [], trip), ["07:00-21:00"]);
+        assert.deepEqual(windows("2026-10-15", [], trip), ["09:00-23:00"]);
+        assert.deepEqual(windows("2026-10-16", [], trip), ["07:00-23:00"]);
+    });
+
+    test("an every-day overnight sleep commitment still blocks both ends of every day", () => {
+        const sleep = [{ label: "Gjumë", type: "sleep", days: null, dates: null, start: "22:00", end: "08:00" }];
+        assert.deepEqual(windows("2026-10-14", [], sleep), ["08:00-22:00"]);
+    });
+
+    test("a sleep commitment for one night leaves the default sleep in force on the day after", () => {
+        const sleep = [{ label: "Gjumë", type: "sleep", days: ["mon"], dates: null, start: "22:00", end: "09:00" }];
+        assert.deepEqual(windows("2026-10-12", [], sleep), ["06:00-22:00"]); // Monday: own sleep replaces the default
+        assert.deepEqual(windows("2026-10-13", [], sleep), ["09:00-23:00"]); // Tuesday: Monday's sleep ends 09:00, default sleep from 23:00
+    });
+
     test("a commitment limited to dates applies only on them", () => {
         const exam = [{ label: "Provim", type: "school", days: null, dates: ["2026-10-14"], start: "10:00", end: "13:00" }];
         assert.deepEqual(windows("2026-10-14", [], exam), ["07:00-10:00", "13:00-23:00"]);
@@ -170,15 +197,6 @@ describe("calendar", () => {
 /* Behaviour the audit identified as wrong (docs/agent-handoff/CLAUDE_REPORT.md). These tests record what
    the code does today so that the fix is a deliberate, visible change of the expectation. */
 describe("KNOWN DEFECTS, to be reversed in Phase 1", () => {
-    test("KNOWN DEFECT P1-5: a commitment crossing midnight blocks the morning of its own day, not the next", () => {
-        const sleep = { label: "Gjumë", type: "sleep", days: null, dates: null, start: "00:00", end: "06:00" };
-        const shift = { label: "Ndërrimi i natës", type: "work", days: ["mon"], dates: null, start: "20:00", end: "10:00" };
-        // Monday: 06:00-10:00 is blocked although the shift only starts at 20:00 that evening.
-        assert.deepEqual(windows("2026-10-12", [], [sleep, shift]), ["10:00-20:00"]);
-        // Tuesday: the shift ends at 10:00 that morning, yet the morning is offered for study.
-        assert.deepEqual(windows("2026-10-13", [], [sleep, shift]), ["06:00-23:30"]);
-    });
-
     test("KNOWN DEFECT P1-6: an availability window ending before it starts becomes two windows", () => {
         const reversed = [{ day: "wed", off: false, windows: [{ start: "20:00", end: "08:00" }] }];
         assert.deepEqual(windows("2026-10-14", reversed), ["07:00-08:00", "20:00-23:00"]);

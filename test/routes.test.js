@@ -423,6 +423,3 @@ describe("logging", () => {
         assert.equal(errorLog.mock.calls[0].arguments[0], "[create-plan] validation failed:");
     });
 });
-
-describe("KNOWN DEFECTS, to be reversed in Phase 1", () => {
-});
