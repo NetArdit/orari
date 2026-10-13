@@ -1,0 +1,448 @@
+{
+  "base": "http://127.0.0.1:3987",
+  "startedAt": "2026-10-13T22:52:43.363Z",
+  "browser": "Edg/155.0.4283.45",
+  "screens": [
+    {
+      "viewport": "phone",
+      "screen": "01-login",
+      "file": "phone-01-login.png",
+      "innerWidth": 360,
+      "scrollWidth": 360,
+      "horizontalOverflow": false,
+      "elementsPastRightEdge": [],
+      "pageHeight": 800,
+      "visibleControls": 3,
+      "controlsUnder44px": 0,
+      "smallestControl": [],
+      "formControlsWithoutAccessibleLabel": 2,
+      "clickableButNotFocusable": 1,
+      "sidebarDisplay": "not visible"
+    },
+    {
+      "viewport": "phone",
+      "screen": "02-register",
+      "file": "phone-02-register.png",
+      "innerWidth": 360,
+      "scrollWidth": 360,
+      "horizontalOverflow": false,
+      "elementsPastRightEdge": [],
+      "pageHeight": 878,
+      "visibleControls": 6,
+      "controlsUnder44px": 0,
+      "smallestControl": [],
+      "formControlsWithoutAccessibleLabel": 5,
+      "clickableButNotFocusable": 1,
+      "sidebarDisplay": "not visible"
+    },
+    {
+      "viewport": "phone",
+      "screen": "03-dashboard",
+      "file": "phone-03-dashboard.png",
+      "innerWidth": 360,
+      "scrollWidth": 360,
+      "horizontalOverflow": false,
+      "elementsPastRightEdge": [],
+      "pageHeight": 2095,
+      "visibleControls": 7,
+      "controlsUnder44px": 2,
+      "smallestControl": [
+        "54x26 Dil nga llogaria",
+        "135x42 Rregullo planin"
+      ],
+      "formControlsWithoutAccessibleLabel": 0,
+      "clickableButNotFocusable": 1,
+      "sidebarDisplay": "static 75x2095"
+    },
+    {
+      "viewport": "phone",
+      "screen": "04-planner-text",
+      "file": "phone-04-planner-text.png",
+      "innerWidth": 360,
+      "scrollWidth": 360,
+      "horizontalOverflow": false,
+      "elementsPastRightEdge": [],
+      "pageHeight": 966,
+      "visibleControls": 9,
+      "controlsUnder44px": 1,
+      "smallestControl": [
+        "54x26 Dil nga llogaria"
+      ],
+      "formControlsWithoutAccessibleLabel": 1,
+      "clickableButNotFocusable": 0,
+      "sidebarDisplay": "static 75x966"
+    },
+    {
+      "viewport": "phone",
+      "screen": "05-planner-form",
+      "file": "phone-05-planner-form.png",
+      "innerWidth": 473,
+      "scrollWidth": 473,
+      "horizontalOverflow": false,
+      "elementsPastRightEdge": [],
+      "pageHeight": 2952,
+      "visibleControls": 39,
+      "controlsUnder44px": 8,
+      "smallestControl": [
+        "54x26 Dil nga llogaria",
+        "188x42 input",
+        "129x42 PunëShkollëRrugë/k",
+        "188x42 input"
+      ],
+      "formControlsWithoutAccessibleLabel": 22,
+      "clickableButNotFocusable": 0,
+      "sidebarDisplay": "static 75x2952"
+    },
+    {
+      "viewport": "phone",
+      "screen": "06-plans-open",
+      "file": "phone-06-plans-open.png",
+      "innerWidth": 424,
+      "scrollWidth": 424,
+      "horizontalOverflow": false,
+      "elementsPastRightEdge": [],
+      "pageHeight": 2912,
+      "visibleControls": 23,
+      "controlsUnder44px": 1,
+      "smallestControl": [
+        "54x26 Dil nga llogaria"
+      ],
+      "formControlsWithoutAccessibleLabel": 0,
+      "clickableButNotFocusable": 1,
+      "sidebarDisplay": "static 75x2912"
+    },
+    {
+      "viewport": "phone",
+      "screen": "07-profile",
+      "file": "phone-07-profile.png",
+      "innerWidth": 360,
+      "scrollWidth": 360,
+      "horizontalOverflow": false,
+      "elementsPastRightEdge": [],
+      "pageHeight": 800,
+      "visibleControls": 5,
+      "controlsUnder44px": 1,
+      "smallestControl": [
+        "54x26 Dil nga llogaria"
+      ],
+      "formControlsWithoutAccessibleLabel": 0,
+      "clickableButNotFocusable": 0,
+      "sidebarDisplay": "static 75x800"
+    },
+    {
+      "viewport": "tablet",
+      "screen": "01-login",
+      "file": "tablet-01-login.png",
+      "innerWidth": 768,
+      "scrollWidth": 768,
+      "horizontalOverflow": false,
+      "elementsPastRightEdge": [],
+      "pageHeight": 1024,
+      "visibleControls": 3,
+      "controlsUnder44px": 0,
+      "smallestControl": [],
+      "formControlsWithoutAccessibleLabel": 2,
+      "clickableButNotFocusable": 1,
+      "sidebarDisplay": "not visible"
+    },
+    {
+      "viewport": "tablet",
+      "screen": "02-register",
+      "file": "tablet-02-register.png",
+      "innerWidth": 768,
+      "scrollWidth": 768,
+      "horizontalOverflow": false,
+      "elementsPastRightEdge": [],
+      "pageHeight": 1024,
+      "visibleControls": 6,
+      "controlsUnder44px": 0,
+      "smallestControl": [],
+      "formControlsWithoutAccessibleLabel": 5,
+      "clickableButNotFocusable": 1,
+      "sidebarDisplay": "not visible"
+    },
+    {
+      "viewport": "tablet",
+      "screen": "03-dashboard",
+      "file": "tablet-03-dashboard.png",
+      "innerWidth": 768,
+      "scrollWidth": 768,
+      "horizontalOverflow": false,
+      "elementsPastRightEdge": [],
+      "pageHeight": 1241,
+      "visibleControls": 7,
+      "controlsUnder44px": 1,
+      "smallestControl": [
+        "54x26 Dil nga llogaria"
+      ],
+      "formControlsWithoutAccessibleLabel": 0,
+      "clickableButNotFocusable": 1,
+      "sidebarDisplay": "static 75x1241"
+    },
+    {
+      "viewport": "tablet",
+      "screen": "04-planner-text",
+      "file": "tablet-04-planner-text.png",
+      "innerWidth": 768,
+      "scrollWidth": 768,
+      "horizontalOverflow": false,
+      "elementsPastRightEdge": [],
+      "pageHeight": 1024,
+      "visibleControls": 9,
+      "controlsUnder44px": 3,
+      "smallestControl": [
+        "54x26 Dil nga llogaria",
+        "165x39 ✦ Përshkrim natyro",
+        "187x39 ▤ Formular i udhëh"
+      ],
+      "formControlsWithoutAccessibleLabel": 1,
+      "clickableButNotFocusable": 0,
+      "sidebarDisplay": "static 75x1024"
+    },
+    {
+      "viewport": "tablet",
+      "screen": "05-planner-form",
+      "file": "tablet-05-planner-form.png",
+      "innerWidth": 941,
+      "scrollWidth": 941,
+      "horizontalOverflow": false,
+      "elementsPastRightEdge": [],
+      "pageHeight": 1648,
+      "visibleControls": 39,
+      "controlsUnder44px": 10,
+      "smallestControl": [
+        "54x26 Dil nga llogaria",
+        "165x39 ✦ Përshkrim natyro",
+        "187x39 ▤ Formular i udhëh",
+        "188x42 input"
+      ],
+      "formControlsWithoutAccessibleLabel": 22,
+      "clickableButNotFocusable": 0,
+      "sidebarDisplay": "static 75x1648"
+    },
+    {
+      "viewport": "tablet",
+      "screen": "06-plans-open",
+      "file": "tablet-06-plans-open.png",
+      "innerWidth": 768,
+      "scrollWidth": 768,
+      "horizontalOverflow": false,
+      "elementsPastRightEdge": [],
+      "pageHeight": 2553,
+      "visibleControls": 23,
+      "controlsUnder44px": 19,
+      "smallestControl": [
+        "54x26 Dil nga llogaria",
+        "67x31 ✓ Kryer",
+        "92x31 ◐ Pjesërisht",
+        "106x31 ✕ Anashkaluar"
+      ],
+      "formControlsWithoutAccessibleLabel": 0,
+      "clickableButNotFocusable": 1,
+      "sidebarDisplay": "static 75x2553"
+    },
+    {
+      "viewport": "tablet",
+      "screen": "07-profile",
+      "file": "tablet-07-profile.png",
+      "innerWidth": 768,
+      "scrollWidth": 768,
+      "horizontalOverflow": false,
+      "elementsPastRightEdge": [],
+      "pageHeight": 1024,
+      "visibleControls": 5,
+      "controlsUnder44px": 1,
+      "smallestControl": [
+        "54x26 Dil nga llogaria"
+      ],
+      "formControlsWithoutAccessibleLabel": 0,
+      "clickableButNotFocusable": 0,
+      "sidebarDisplay": "static 75x1024"
+    },
+    {
+      "viewport": "desktop",
+      "screen": "01-login",
+      "file": "desktop-01-login.png",
+      "innerWidth": 1280,
+      "scrollWidth": 1280,
+      "horizontalOverflow": false,
+      "elementsPastRightEdge": [],
+      "pageHeight": 800,
+      "visibleControls": 3,
+      "controlsUnder44px": 0,
+      "smallestControl": [],
+      "formControlsWithoutAccessibleLabel": 2,
+      "clickableButNotFocusable": 1,
+      "sidebarDisplay": "not visible"
+    },
+    {
+      "viewport": "desktop",
+      "screen": "02-register",
+      "file": "desktop-02-register.png",
+      "innerWidth": 1280,
+      "scrollWidth": 1280,
+      "horizontalOverflow": false,
+      "elementsPastRightEdge": [],
+      "pageHeight": 876,
+      "visibleControls": 6,
+      "controlsUnder44px": 0,
+      "smallestControl": [],
+      "formControlsWithoutAccessibleLabel": 5,
+      "clickableButNotFocusable": 1,
+      "sidebarDisplay": "not visible"
+    },
+    {
+      "viewport": "desktop",
+      "screen": "03-dashboard",
+      "file": "desktop-03-dashboard.png",
+      "innerWidth": 1280,
+      "scrollWidth": 1280,
+      "horizontalOverflow": false,
+      "elementsPastRightEdge": [],
+      "pageHeight": 1257,
+      "visibleControls": 7,
+      "controlsUnder44px": 1,
+      "smallestControl": [
+        "135x42 Rregullo planin"
+      ],
+      "formControlsWithoutAccessibleLabel": 0,
+      "clickableButNotFocusable": 1,
+      "sidebarDisplay": "static 245x1257"
+    },
+    {
+      "viewport": "desktop",
+      "screen": "04-planner-text",
+      "file": "desktop-04-planner-text.png",
+      "innerWidth": 1280,
+      "scrollWidth": 1280,
+      "horizontalOverflow": false,
+      "elementsPastRightEdge": [],
+      "pageHeight": 813,
+      "visibleControls": 9,
+      "controlsUnder44px": 2,
+      "smallestControl": [
+        "165x39 ✦ Përshkrim natyro",
+        "187x39 ▤ Formular i udhëh"
+      ],
+      "formControlsWithoutAccessibleLabel": 1,
+      "clickableButNotFocusable": 0,
+      "sidebarDisplay": "static 245x813"
+    },
+    {
+      "viewport": "desktop",
+      "screen": "05-planner-form",
+      "file": "desktop-05-planner-form.png",
+      "innerWidth": 1280,
+      "scrollWidth": 1280,
+      "horizontalOverflow": false,
+      "elementsPastRightEdge": [],
+      "pageHeight": 1655,
+      "visibleControls": 39,
+      "controlsUnder44px": 9,
+      "smallestControl": [
+        "165x39 ✦ Përshkrim natyro",
+        "187x39 ▤ Formular i udhëh",
+        "198x42 input",
+        "142x42 PunëShkollëRrugë/k"
+      ],
+      "formControlsWithoutAccessibleLabel": 22,
+      "clickableButNotFocusable": 0,
+      "sidebarDisplay": "static 245x1655"
+    },
+    {
+      "viewport": "desktop",
+      "screen": "06-plans-open",
+      "file": "desktop-06-plans-open.png",
+      "innerWidth": 1280,
+      "scrollWidth": 1280,
+      "horizontalOverflow": false,
+      "elementsPastRightEdge": [],
+      "pageHeight": 2543,
+      "visibleControls": 23,
+      "controlsUnder44px": 18,
+      "smallestControl": [
+        "67x31 ✓ Kryer",
+        "92x31 ◐ Pjesërisht",
+        "106x31 ✕ Anashkaluar",
+        "67x31 ✓ Kryer"
+      ],
+      "formControlsWithoutAccessibleLabel": 0,
+      "clickableButNotFocusable": 1,
+      "sidebarDisplay": "static 245x2543"
+    },
+    {
+      "viewport": "desktop",
+      "screen": "07-profile",
+      "file": "desktop-07-profile.png",
+      "innerWidth": 1280,
+      "scrollWidth": 1280,
+      "horizontalOverflow": false,
+      "elementsPastRightEdge": [],
+      "pageHeight": 800,
+      "visibleControls": 5,
+      "controlsUnder44px": 0,
+      "smallestControl": [],
+      "formControlsWithoutAccessibleLabel": 0,
+      "clickableButNotFocusable": 0,
+      "sidebarDisplay": "static 245x800"
+    }
+  ],
+  "keyboard": {
+    "loginTabStops": [
+      {
+        "element": "input#loginEmail",
+        "text": "",
+        "outline": "none 3px",
+        "boxShadow": "present",
+        "borderColor": "rgba(74, 222, 128, 0.6)"
+      },
+      {
+        "element": "input#loginPassword",
+        "text": "",
+        "outline": "none 3px",
+        "boxShadow": "present",
+        "borderColor": "rgba(74, 222, 128, 0.6)"
+      },
+      {
+        "element": "button.primary-button",
+        "text": "Hyr",
+        "outline": "auto 1px",
+        "boxShadow": "present",
+        "borderColor": "rgb(6, 17, 9)"
+      },
+      {
+        "element": "body",
+        "text": "STUDYFLOW\n        \n\n",
+        "outline": "none 3px",
+        "boxShadow": "none",
+        "borderColor": "rgb(243, 244, 246)"
+      },
+      {
+        "element": "input#loginEmail",
+        "text": "",
+        "outline": "none 3px",
+        "boxShadow": "present",
+        "borderColor": "rgba(74, 222, 128, 0.6)"
+      },
+      {
+        "element": "input#loginPassword",
+        "text": "",
+        "outline": "none 3px",
+        "boxShadow": "present",
+        "borderColor": "rgba(74, 222, 128, 0.6)"
+      }
+    ],
+    "registerLinkReachable": false
+  },
+  "consoleErrors": [
+    "SyntaxError: Expected property name or '}' in JSON at position 1 (line 1 column 2)\n    at JSON.parse (<anonymous>)\n    at getCurrentUser (http://127.0.0.1:3987/script.js:34:17)\n    at http://127.0.0.1:3987/script.js:1178:22"
+  ],
+  "failedRequests": [],
+  "corruptedStorage": {
+    "authVisible": true,
+    "appVisible": false,
+    "errorsAfter": [
+      "SyntaxError: Expected property name or '}' in JSON at position 1 (line 1 column 2)\n    at JSON.parse (<anonymous>)\n    at getCurrentUser (http://127.0.0.1:3987/script.js:34:17)\n    at http://127.0.0.1:3987/script.js:1178:22"
+    ]
+  }
+}
