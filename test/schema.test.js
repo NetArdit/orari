@@ -35,6 +35,11 @@ describe("ParseRequestBody", () => {
         assert.equal(ok(ParseRequestBody, { text: "abc", clientDate: "2026-02-31" }), false);
         assert.equal(ok(ParseRequestBody, { text: "abc", clientDate: "neser" }), false);
         assert.equal(ok(ParseRequestBody, { text: "abc", timeZone: "Prishtina" }), false);
+        // With the client's own date the zone is not needed, so a name the server does not know is dropped, not refused.
+        const dropped = ParseRequestBody.safeParse({ text: "abc", clientDate: "2026-10-15", timeZone: "Prishtina" });
+        assert.equal(dropped.success, true);
+        assert.equal(dropped.data.timeZone, undefined);
+        assert.equal(dropped.data.clientDate, "2026-10-15");
         assert.equal(ok(ParseRequestBody, { text: "abc", timeZone: "E".repeat(65) }), false);
         assert.deepEqual(fieldErrors(ParseRequestBody.safeParse({ text: "abc", timeZone: "Prishtina" }).error), [
             { path: "timeZone", message: "Zona kohore nuk është e vlefshme." },

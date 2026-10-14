@@ -77,7 +77,12 @@ function createFlow<TInput, TDone>(run: (input: TInput, signal: AbortSignal) => 
             set({ status: "working", startedAt: now() });
 
             run(input, controller.signal)
-                .catch((): Outcome<TDone> => ({ ok: false, failure: { kind: "server", message: "Ndodhi një gabim i papritur. Provo përsëri." } }))
+                .catch((error: unknown): Outcome<TDone> => {
+                    // Not shown to the person, but kept where a developer can read it: this is the one place an unforeseen
+                    // exception in a flow turns into the generic message.
+                    console.error("[flow] unexpected error:", error);
+                    return { ok: false, failure: { kind: "server", message: "Ndodhi një gabim i papritur. Provo përsëri." } };
+                })
                 .then((outcome) => {
                     if (mine !== runId) return; // cancelled, reset or superseded while it ran
                     if (outcome.ok) set({ status: "done", result: outcome.result });

@@ -158,6 +158,25 @@ describe("failures are sorted into kinds the screens can act on", () => {
         expect(okButNotJson.kind).toBe("server");
     });
 
+    test("describing a plan: the host's start-up page (502 without our code) is repeated once, then it is a failure", async () => {
+        let n = 0;
+        const parsed = { startDate: null, endDate: null, subject: "matematikë", materialAmount: null, goal: null, planMode: null, weeklyAvailability: [], commitments: [], sessionPreferenceMinutes: null, energy: null, difficulty: null, clarifyingQuestions: [] };
+        const recovered = fakeFetch(() => (++n === 1 ? new Response("<html>starting</html>", { status: 502 }) : json(200, { parsed })));
+        const ok = await createApiClient({ fetch: recovered.fetchFn }).parse({ text: "abc", clientDate: "2026-10-14", timeZone: "UTC" });
+        expect(ok.ok).toBe(true);
+        expect(recovered.calls).toHaveLength(2);
+
+        const down = fakeFetch(() => new Response("<html>down</html>", { status: 503 }));
+        const failed = await createApiClient({ fetch: down.fetchFn }).parse({ text: "abc", clientDate: "2026-10-14", timeZone: "UTC" });
+        expect(failed.ok).toBe(false);
+        expect(down.calls).toHaveLength(2);
+
+        // our own answers are never repeated
+        const own = fakeFetch(() => json(502, { code: "AI_UNUSABLE_ANSWER", error: "x" }));
+        await createApiClient({ fetch: own.fetchFn }).parse({ text: "abc", clientDate: "2026-10-14", timeZone: "UTC" });
+        expect(own.calls).toHaveLength(1);
+    }, 20_000);
+
     test("no connection is offline, in Albanian", async () => {
         const { fetchFn } = fakeFetch(() => {
             throw new TypeError("Failed to fetch");

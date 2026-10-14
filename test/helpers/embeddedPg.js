@@ -30,7 +30,7 @@ async function withStartLock(fn) {
             break;
         } catch {
             try {
-                if (Date.now() - statSync(LOCK).mtimeMs > 180_000) rmSync(LOCK, { recursive: true, force: true });
+                if (Date.now() - statSync(LOCK).mtimeMs > 90_000) rmSync(LOCK, { recursive: true, force: true });
             } catch { /* released meanwhile */ }
             if (Date.now() > deadline) throw new Error("timed out waiting to start PostgreSQL");
             await new Promise((r) => setTimeout(r, 300));

@@ -328,7 +328,12 @@ export function createApiClient({
 
         /** Free text to structured plan inputs. The server gets the person's own date and time zone. */
         parse: async (input: ParseRequest, options: RequestOptions = {}): Promise<ApiResult<ParsedDescription>> => {
-            const result = await request<{ parsed: ParsedDescription }>("POST", "/api/parse", input, aiTimeoutMs, options);
+            let result = await request<{ parsed: ParsedDescription }>("POST", "/api/parse", input, aiTimeoutMs, options);
+            // Parsing changes nothing on the server, so one repeat after the host's start-up page is safe.
+            if (!result.ok && result.kind === "server" && result.code === undefined && (result.status === 502 || result.status === 503)) {
+                await pause(4000, options.signal);
+                if (!options.signal?.aborted) result = await request<{ parsed: ParsedDescription }>("POST", "/api/parse", input, aiTimeoutMs, options);
+            }
             return result.ok ? { ok: true, data: result.data.parsed } : result;
         },
 
