@@ -18,7 +18,7 @@ Node 24.20, Express 5.2.1 with helmet and express-rate-limit (app built by `crea
 Local repository, branch `main`, no remote. Baseline of the untouched project: `b68ef0e`.
 
 ## Gate
-Batches 0 to 4 accepted by Codex. Batch 5 ACCEPTED WITH CONDITIONS. Codex has ruled on the accounts architecture (see `CODEX_DECISIONS.md`, entry for `codex/08`). Batch 6 (research only) delivered and awaiting Codex's verdict: hosting, accounts and law research (gaps named); design research (thin: marketing pages only, directions not yet revised); both authorised live AI calls were refused by the provider with 429, so no latency evidence; the app's primary model `z-ai/glm-5.2:free` is no longer listed on OpenRouter. No accounts code and no screen may be written until Batch 6 is reviewed.
+Batches 0 to 4 accepted by Codex. Batch 5 ACCEPTED WITH CONDITIONS. Codex has ruled on the accounts architecture (see `CODEX_DECISIONS.md`, entry for `codex/08`). Batch 6 reviewed: hosting research partially accepted (host open), design research incomplete, live AI not achieved. Batch 7 is in progress: model configuration, one more bounded live AI attempt, evidence pass and revised paired directions, planner screens with both layout styles and colour modes, the settings contract, and an in-memory accounts repository interface. No accounts routes, database driver, deployment or e-mail.
 
 ## Owner decisions, 2026-10-14 (these supersede earlier working assumptions)
 - Name: **Orari**.
