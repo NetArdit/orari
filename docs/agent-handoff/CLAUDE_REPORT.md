@@ -1,100 +1,118 @@
-# CLAUDE REPORT 04 — Batch 3: client foundation
+# CLAUDE REPORT 05 — Batch 4: client domain, storage integrity, state layer, error codes
 
 Date: 2026-10-14. Author: Claude Code. Previous reports: `docs/agent-handoff/reports/`.
 
 ## 1. Status
 
-**VERIFIED COMPLETE** against the acceptance criteria of `docs/agent-handoff/codex/04-batch-2-verdict.md`, "Batch 3 authorization". No live AI call. No screen of the planner was built; the page at `/app` is a plain status page that proves the foundation in a real browser. Nothing pushed or deployed.
+**VERIFIED COMPLETE** against `docs/agent-handoff/codex/06-batch-3-verdict.md`, "Batch 4". No screen, token or component was built. No live AI call. Nothing pushed or deployed. The owner has not yet answered the four questions (design direction, default theme, name, accounts).
 
-Also done since your last verdict: your design conditions (`codex/05-design-review.md`) are applied and the two directions are with the owner, with the four questions you listed. The owner has not answered yet.
+Two defects were found by tests written in this batch, both fixed in it:
+- An address with a broken percent-escape under `/app` answered **500**; it now answers 400 `BAD_REQUEST` (found while strengthening the traversal test).
+- The store's `load()` did not check the storage version, so data written by a newer app version would have been read and reinterpreted; the repository had the check, the store never called it (found by the store's own test).
 
-## 2. What was asked, and where each part is
+## 2. Commits
 
-1. Legacy journey extended to plan creation, exact assertions for re-plan summaries → `e2e/legacy-create.mjs` (24 checks); `docs/agent-handoff/evidence/batch-2/replan-journey.mjs` (15 checks, exact arrays, done in the previous cycle).
-2. `client/` with Vite, React, Tailwind, strict TypeScript → `client/vite.config.ts`, `client/tsconfig.json`, `client/index.html`, `client/src/`.
-3. Typed API client → `client/src/api/types.ts`, `client.ts`, `client.test.ts`.
-4. Versioned IndexedDB storage and the legacy migration → `client/src/storage/model.ts`, `store.ts`, `idb.ts`, `repository.ts`, `legacy.ts`, `storage.test.ts`.
-5. Router → `client/src/router/routes.ts`, `routes.test.ts`, `useRoute.ts`.
-6. Production build served at `/app` with SPA routing, `/` unchanged → `lib/app.js` (one block), `test/routes.test.js` (7 new tests).
-7. Vitest for the client, `node:test` kept for the server → `npm run client:test`, `npm test`, `npm run test:all`.
+- `00f51be` Stable error codes on every error body; stronger traversal test; 400 for broken addresses. `lib/app.js`, `lib/plan.js`, `lib/schema.js`, `test/routes.test.js`, `test/plan.test.js`.
+- `c1264cd` Client classifies failures by code. `client/src/api/client.ts`, `types.ts`, `client.test.ts`.
+- `7aaac45` Storage: checks a write depends on are made inside the write. `client/src/storage/store.ts`, `idb.ts`, `repository.ts`, `legacy.ts`, `storage.test.ts`.
+- `b31ee33` Domain. `client/src/domain/clock.ts`, `progress.ts`, `replan.ts`, `planForm.ts`, `ics.ts`, `domain.test.ts`.
+- The state commit (see `git log`): `client/src/state/planStore.ts`, `flows.ts`, `state.test.ts`.
 
-Commits: `23463c9` (creation journey and shared browser helper `e2e/browser.mjs`), `2eb3900` (the foundation), plus the report commit.
+## 3. Your Batch 3 conditions, one by one
 
-## 3. Official documentation consulted before configuring
+1. **Initialise under two tabs.** `KeyValueStore.commit(writes, { onlyIfAbsent })`: the "no profile yet" check is evaluated inside the same transaction as the writes (in IndexedDB, a `getKey` request at the start of the readwrite transaction, with the puts issued from its success callback; readwrite transactions on one object store are serialised across tabs). The loser gets `AlreadySetUpError` and none of its data is stored. `migrateFromLegacy` treats that as "already done" rather than a failure. Tests: two set-ups started together in both orders, and two migrations together. The old check-then-write behaviour, restored as a mutant, fails 3 tests.
+2. **Restore under a concurrent save.** A new write kind, `{ deletePrefix, except }`, lists the keys to remove inside the transaction. Test: another tab's save lands immediately before the restore's commit; the plan does not survive. The old "list first, then write" behaviour, restored as a mutant, fails that test.
+3. **Duplicate plan ids in a backup** are counted (`plansDuplicated`) and the first is kept; they no longer collapse silently. `initialise` refuses two plans with one id outright.
+4. **Generated-id collisions.** Replacement ids, for sessions and for plans, are checked against every id in use: the originals further down the list and the ones just handed out. After 50 colliding offers the conversion stops rather than store duplicates. `mergeReplan` and `planFromAnswer` do the same for ids arriving from the server.
+5. **Unknown legacy status or kind** are stored as `pending` / `learning` (which claim no progress) and now counted in the outcome (`sessionsWithUnknownStatus`, `sessionsWithUnknownKind`), only for plans actually carried over, so a screen can tell the person.
+6. **Traversal test.** Raw `http.request` (fetch removes `..` before sending), a real file one level above the client folder containing a unique sentinel, ten attack paths (plain, percent-encoded in both cases, backslash, nested under `assets`, doubled slash). Asserts the sentinel is never in the body and the status is 400/403/404 or the client's own page.
 
-- Tailwind, "Installing Tailwind CSS with Vite" (tailwindcss.com/docs/installation/using-vite, v4.3): packages `tailwindcss` and `@tailwindcss/vite`, the plugin in `vite.config`, `@import "tailwindcss";` in the CSS. Followed exactly.
-- Vite guide (vite.dev/guide, v8.3.4): Node 20.19+ or 22.12+; `index.html` at the project root as the entry; production target "Baseline Widely Available" (browsers from about mid-2023). I did not find the `base` option on that page; `base: "/app/"` is used from my knowledge of Vite and verified by the build's output and the browser journey, not from a page I read today.
-- Vitest guide (vitest.dev/guide, v5.0.4): requires Vite ≥ 6.4 and Node ≥ 22.12; reads `vite.config.*` by default.
-- Not consulted: React 19 documentation (nothing version-specific is used beyond `createRoot`, `StrictMode`, `useSyncExternalStore`); TypeScript 7 release notes. TypeScript 7.0.2 is a new major: it type-checks this project and rejects wrong code (section 6), which is all that is asked of it here, since Vite does the transform.
+**NOT TESTED**: two real browser tabs racing. The IndexedDB path is exercised by the single-tab journey (26 of 26 after the change); the race itself is covered only against the memory store, whose commit is atomic in the same way. Driving two tabs needs a second DevTools target in `e2e/browser.mjs`; I can add it if you want it before cutover.
 
-Installed versions: react and react-dom 19.3.0; vite 8.3.4; @vitejs/plugin-react 6.1.2; tailwindcss and @tailwindcss/vite 4.3.3; typescript 7.0.2; vitest 5.0.4; @types/react and @types/react-dom 19.3.0. All MIT except TypeScript (Apache-2.0). `npm audit`: 0 vulnerabilities. No router, state, form, date or IndexedDB library was added.
+## 4. Error codes
 
-## 4. Design of the foundation
+Every error body is `{ code, error }` (plus `fields` on validation). 21 codes, listed with their statuses in `lib/schema.js` (`ERROR_CODES`). A test reads `lib/app.js` and `lib/plan.js` and fails if a code is used but not published, or published but not used. The client maps each code to a kind through a `Record<ErrorCode, ApiFailureKind>`, so a new server code does not compile until it is placed. Without a code only the status is used; a 502 or 503 without our code is treated as an outage in front of the server (`server`), not as an AI result. The provider's limit and unavailability now have their own kind, `provider_unavailable`, instead of being shown as the person's own rate limit.
 
-**Types.** `client/src/api/types.ts` imports the server's zod schemas with `import type` and derives request types with `z.input` and response types with `z.output`. Nothing from `lib/` is bundled. If a schema changes, the client stops compiling where it disagrees.
+The old page is unaffected: it reads `error` only.
 
-**API client.** `createApiClient({ baseUrl, fetch, aiTimeoutMs, timeoutMs })` returns `health`, `parse`, `createPlan`, `adjustPlan`. Every call resolves to `{ ok: true, data }` or `{ ok: false, kind, message, status?, fields?, retryAfterSeconds? }` and never throws. Kinds: `validation`, `rate_limited`, `busy`, `timeout`, `aborted`, `not_configured`, `ai_failed`, `offline`, `server`. The client waits 85 s on AI routes (the server gives up at 75 s) and 10 s on health. One weakness to rule on: the server answers 503 for three different situations (no key, server busy, the provider's own limit), and the client tells them apart by comparing the server's message text. A machine-readable `code` in error bodies would be sturdier; it is an additive contract change, so I did not make it.
+## 5. Proposed domain rules (for your ruling; not presented as product policy)
 
-**Storage.** A `KeyValueStore` interface (`get`, `keys(prefix)`, `commit(writes)` all-or-nothing) with two implementations: IndexedDB for the browser, memory for tests. The repository on top of it validates everything it reads with zod (stored data is treated as input), keeps the schema version in a `meta` record, refuses data written by a newer version, reports plans it cannot read without deleting them, and offers `exportBackup` / `restoreBackup` (restore validates the whole file before touching anything and replaces in one write). Keys: `meta`, `profile`, `plan:<id>`.
+All in `client/src/domain/progress.ts`, each a named function, each taking a `Clock` (`{ today, minutes }` in the device's local time) instead of reading the system time.
 
-**Migration.** `migrateFromLegacy(repository, localStorage)` runs on every start and does something only when the new storage is empty. It reads the old keys without ever throwing on damaged JSON; if the two copies of the user differ it takes the one with more plans; if several signed-out accounts exist it returns `choose` with their names and copies nothing until one is chosen. It carries over name, education level, school, creation time, and every plan with its inputs and sessions. It leaves out the password and the e-mail. It gives a fresh id to any session whose id repeats inside a plan (the old server's `a1` collisions) and to a plan whose id repeats. A plan that fails validation is listed by subject with the failing field, and the other plans still come over. It never writes to or removes the old keys.
+**"Today"** is the device's local calendar date. Plans hold dates and times of day without a zone, so nothing is converted.
 
-**Router.** `parsePath` and `hrefFor` are pure functions over a `Route` union; `useRoute` reads `location.pathname` through `useSyncExternalStore`; ordinary `<a href>` links are intercepted only for plain left clicks on `/app` addresses. Addresses: `/app/`, `/app/orari`, `/app/plan-i-ri`, `/app/planet`, `/app/planet/:id`, `/app/planet/:id/seanca/:id`, `/app/une`. About 70 lines instead of a dependency.
+**State of a session** (`sessionState`): the person's mark always wins: `completed` → done, `partial` → partial, `skipped` → skipped, whatever the date. Unmarked: before today → **missed**; after today → upcoming; today, by the minute: before its start → upcoming, from its start → **now**, from its end → **late**. A session is "late" for the rest of its day and becomes "missed" only at midnight.
+Boundary examples (tested): a 17:30–18:30 session is upcoming at 17:29, now at 17:30 and 18:29, late at 18:30 and 23:59, missed at 00:00 next day.
+*Old page:* no "now" or "late"; an unmarked session earlier today is simply pending.
 
-**Server.** When `client/dist/index.html` exists: `/app/assets/*` served with `immutable, max-age=1y` (file names carry a content hash) and 404 for a missing asset; other build files as themselves; every other address under `/app` gets `index.html` with `Cache-Control: no-cache`. Without a build, `/app` is a 404 and nothing else changes. The existing content security policy needed no change: the build has no inline script.
+**Completed** (`progressOf().done`) counts sessions marked done. **Partly done is counted separately**, never as completed. *Old page:* the dashboard counts partial as completed, the plan card does not.
 
-## 5. Evidence
+**Missed** counts unmarked sessions whose day has passed. **Skipped is counted separately**: it is a decision, not a lapse. *Old page:* "missed" on the dashboard is skipped plus overdue together, while the re-plan banner counts overdue only.
 
-- `npm test` → **141 tests, 141 pass** (was 134; 7 new for `/app`).
-- `npm run client:typecheck` → clean. `npm run client:test` → **64 tests in 3 files, 64 pass**, about 1 s (api 17, storage 32, router 15).
-- `npm run check`, `npm audit` (0 vulnerabilities) → pass.
-- **Does the type checker bite?** A probe file with three deliberate errors against the server's shapes (an invalid plan mode, an invalid session kind, a number where a string list is required) produced three `TS2322` errors naming the server's own enum values; removed afterwards.
-- **Mutation check of the client**: 20 single deliberate bugs. 18 caught. The two survivors were the same matter seen from both sides: adding the password to the migrated profile, and letting the profile schema keep unknown keys, each change nothing alone because the other guard still strips it. I added a test that pins the schema guard at all three places a profile enters storage (initialise, save, restore); with it the schema mutant fails. The other (the migration naming its fields explicitly) remains an equivalent mutant while the schema guard exists; the end-to-end assertion that the secret appears nowhere in storage covers the two together.
-- **Browser, built client** (`e2e/app-foundation.mjs`, Edge 155 headless, real IndexedDB read back with the browser's own API): **26 of 26**. A never-used device writes nothing. With the old page's data (a user with password and e-mail, two plans, one with a duplicated session id): migrated on first start; storage holds exactly `meta`, `profile`, `plan:plan-1`, `plan:plan-2`; the profile equals the five expected fields; the secret and the e-mail appear nowhere in the database; every session keeps status, times, tasks and material; the duplicate id is repaired and the first keeps its id; the old keys are byte-identical afterwards; a second start copies nothing and storage is identical. Links change address and screen without a reload, Back works, a deep address opens directly, an unknown address says so. Tab reaches the first link with a visible outline and a 44 px target. At 360 px the page is 360 px wide. The old page at `/` still opens with the same user and counts its two plans. No console errors, so the security policy blocks nothing.
-- **Browser, old page**: `e2e/legacy-create.mjs` **24 of 24**; re-plan journey **15 of 15**; Batch 0 baseline: all 21 screens and the keyboard walk measure identically to Batch 0.
+**Minutes studied**: full length of done sessions plus half the length of partly done ones (the old page's rule, kept). **Completion**: (done + partial/2) / total; 0 for an empty plan.
 
-**What the creation journey recorded about the old page** (behaviour the new client must match or deliberately improve): the form sends one field as both `materialAmount` and `goal`; malformed availability windows and unknown day codes are dropped without a word; a half-filled commitment row is dropped; the confirmation takes `goal` from its field and `materialAmount` from the AI; the AI's clarifying question is not shown when dates were found (pinned as "KNOWN GAP"); a refused request shows the server's message by `alert`, stores nothing and keeps the form's contents. Unlike re-plan, creation saves correctly.
+**Needs re-planning** (`needsReplan`): the plan has not ended and has at least one missed session. A skipped session alone does not trigger it; a late one today does not either.
 
-## 6. Resource footprint (you asked for it)
+**Streak** (`streakDays`): days in a row with study, counted back from today. A day counts if at least one session of any plan that day is done or partly done. A day with sessions planned and none done ends it. **A day with nothing planned neither counts nor ends it.** Today does not end it while it is still going. The number is days with study, not calendar span.
+Examples (tested): Fri and Sat done, Sunday free, Mon and Tue done → 4. Mon done, Tue planned and untouched, Wed and Thu done → 2. Yesterday missed, nothing done today → 0.
+*Old page:* any day without study ends the streak, so a plan with Sunday off can never show more than six.
 
-- `node_modules`: 28 MB → 125 MB (+97 MB). 
-- Production build: `index.html` 0.43 kB; CSS 6.36 kB (2.08 kB gzip); JS **290.11 kB (86.57 kB gzip)**; `client/dist` 293 kB on disk. Most of the JS is React and react-dom; zod is in the bundle because storage validates what it reads. Not yet split or analysed per package.
-- `npm run client:build` (type-check and build): **4.3 s, peak 258 MB** working set summed over the process tree, sampled every 250 ms. Vite's own step reported 458 ms.
-- Free disk: 1,970 MB before the install, 1,799 MB after it, **1,444 MB now**. The further 355 MB did not go to the project (`node_modules` is still 125 MB): I removed my leftover browser profiles and it did not come back, so it is caches outside the repository (npm's and the browser's). I have not investigated further; if disk becomes the constraint, `npm cache clean` is the first candidate and needs no approval from you but I would tell the owner first.
+**Next session** (`nextSession`): the one in progress if there is one; otherwise the earliest unmarked session that has not started, today or later, across all plans. A late session is not "next"; it stays in today's list as late. *Old page:* skips the session in progress.
 
-## 7. Deviations and judgment calls
+**Current plan** (`currentPlan`): the most recently created plan that has not ended.
 
-1. **E-mail is not migrated**, as well as the password. You ruled "do not migrate the password"; I went one step further because a local profile has no use for an e-mail address and the less personal data is kept the better. It remains in the old keys until cutover. Say if you want it kept.
-2. **`stats` and the `profile` echo inside old plans are not stored.** Statistics are derived from the sessions; storing them invites the disagreement the old page has between its counters. "Plans round-trip" therefore means subject, dates, mode, strategy, explanations, warnings, inputs and sessions.
-3. **Tolerant reading of old sessions**: an unknown status is read as `pending`, an unknown kind as `learning`, rather than rejecting the whole plan. Dates and times are strict: a session with a bad time rejects its plan, which is then reported by subject.
-4. **No router dependency** (you wrote "a router").
-5. **`/app` redirects to `/app/`** (a 301 from the static file handling). Both work; the canonical address is `/app/`.
-6. **`npm test` now names its files** (`test/**/*.test.js`): without that, Node's runner also picked up the client's Vitest files and failed on them.
-7. **The status page's Albanian text** is temporary and will go with the page; it is not offered as product copy.
-8. **Several old accounts on one device**: the code returns the list, but there is no screen yet to choose from, so such a device currently shows "Duhet zgjedhur njëra" and copies nothing. Only the signed-in or sole account is handled end to end today.
+Questions these raise that are product decisions: whether a late session should be offered a one-tap "move to later today"; whether "partly done" should count towards a streak (it does here); whether skipped sessions should feed the re-plan prompt (they do: they are sent as missed, as the old page does).
 
-## 8. Known gaps and risks
+## 6. The rest of the domain layer
 
-- The IndexedDB adapter (`idb.ts`, 60 lines) has no unit test, by your instruction to keep Vitest in the Node environment; it is covered by the browser journey only (open, read, write, reopen). Failure paths in a real browser (quota exceeded, private mode, a blocked upgrade) are NOT TESTED.
-- Two tabs: the old page and the new client can both be open; after the one-time copy they diverge, by design during coexistence (the old page keeps writing its own keys, the new client does not read them again). At cutover the migration has to run against the then-current old data, which the present "only when empty" rule does not do for a device that already opened `/app`. This needs a decision before cutover: re-copy at cutover and replace, or merge. I recommend re-copy-and-replace, since nothing can be created in the new client before cutover anyway.
-- React components have no tests yet (there is one, the status page, exercised by the journey).
-- Nothing AI-backed has been run live. Still no key.
-- The bundle is 87 kB gzip before any screen exists.
+- **`replan.ts`**: `progressSummaries` (what the AI is told; capped at the server's 50 lines per list, keeping the most recent, where the old page would have been refused with a 400 once a plan passed 50), `buildAdjustRequest`, `mergeReplan` (keeps the past and everything marked, replaces unmarked sessions from today on, never trusts statuses in the answer, re-ids clashes, does not mutate its input, counts new sessions that are already over), `planFromAnswer`.
+- **`planForm.ts`**: one form state for both ways of starting. `formFromParsed` turns what the AI read into editable state (answers audit finding P1-7); `buildPlanInputs` validates everything at once and reports with the server's field paths, so an error from either side lands on the same control. Material and goal are separate fields (the old form merged them); days are chosen, not typed; a half-filled busy-time row is an error, not silently dropped; overlapping free windows on one day are refused; one-off days without study are supported (P2-4). A test feeds the form's output to the server's own `CreatePlanBody` and requires that the server's normalisation changes nothing.
+- **`ics.ts`**: RFC 5545 export of the sessions still to do, floating local times, stable UIDs from session ids, text escaping, folding at 75 bytes without splitting a character.
 
-## 9. Git
+**A finding for the server, not fixed here**: when a plan is adjusted, the server builds today's calendar from 06:00, so the AI can place a new session at 08:00 when it is already 18:00. The client now counts such sessions (`alreadyOver`) so a screen can say so, but the right fix is for adjust to accept the current local time and start today's windows from it. That is an additive request field and a small change in `lib/time.js`; I recommend it for the next server batch.
 
-Branch `main`, no remote, working tree clean after the report commit.
+## 7. State layer
 
-## 10. Recommended next batch
+- **`planStore.ts`** (no React): `loading` / `failed` / `ready`. `markSession` changes the screen at once and writes afterwards; on a failed write the mark is taken back to what storage is known to hold and `saveError` is set. Writes to one plan are serialised. An older mark that fails late does not undo a newer one. `savePlan` and `deletePlan` show their effect only once stored.
+- **`flows.ts`**: `createParseFlow`, `createPlanFlow`, `createReplanFlow` on one machine: `idle` → `working` → `done` | `failed`. `start()` while working returns false and sends nothing (duplicate submission). `cancel()` aborts the request and is idle at once. An answer from a cancelled or superseded run is ignored, including when the connection ignores the abort. Failures carry the API kind, message, fields and retry time; three kinds never involve the server: `invalid` (the form), `storage` (the plan could not be kept), `gone` (the plan no longer exists). Re-plan merges into the plan as it is when the answer arrives, after pending marks have been written, so a session ticked while waiting is kept.
 
-Blocked on the owner for anything visual. What can proceed without the choice of direction, in order of value:
+## 8. Evidence
 
-- **Batch 4a, domain logic for the client as pure, tested functions**: the plan merge on re-plan (the rule the old page now follows), progress and streak statistics with one stated meaning each, "today" and "next session" selection, building the request inputs from form state (including day chips and time ranges instead of free text), parsing and editing availability and commitments, an `.ics` export of a plan. Each specified per section 10 of the operating system before it is written. No UI.
-- **Batch 4b, the state layer**: one store over the repository with optimistic session marking and rollback on a failed write, the create and re-plan flows as state machines (idle, working with cancel, failed with kind, done) tested against a fake API client.
-- **Then, once the owner has chosen**: tokens and base components from the chosen direction, and the screens.
+- `npm test`: **148 tests, 148 pass**. `npm run client:typecheck`: clean. `npm run client:test`: **162 tests in 5 files, 162 pass** (api 18, domain 52, router 15, state 33, storage 44). `npm audit`: 0 vulnerabilities. `npm run check`: pass.
+- Type checker: a probe assigning `"NOT_A_CODE"` to `ErrorCode` fails with the union of real codes listed.
+- Browser, built client: `e2e/app-foundation.mjs` **26 of 26** after the storage changes (real IndexedDB).
+- **Mutation checks**: storage, the two old race behaviours restored: both caught (3 and 1 failures). Domain and state: 29 single deliberate bugs prepared; 28 ran. 27 caught on the first pass; the one survivor, "a stale answer is accepted", exposed that my fake API always honoured the abort, so the guard against late answers was never exercised. I added a test with a connection that ignores cancelling; the mutant then fails. The 29th ("comma not escaped in the calendar export") did not run because my shell quoting mangled the marker; that behaviour is asserted directly by the `escapeText` test.
+- Production JavaScript: **87.34 kB gzip** (292 kB raw), against your 200 kB budget. Unchanged by the domain and state modules because no screen imports them yet; expect it to rise when they are used.
 
-Questions for you: whether error bodies should gain a `code` (section 4); what cutover does on a device that has already opened `/app` (section 8); whether the bundle size needs a budget now.
+**NOT TESTED**: anything with a real AI provider; two real tabs; the store and flows inside React (no component uses them yet); IndexedDB failure modes (quota, private mode).
 
-## 11. Handoff
+## 9. Deviations and judgment calls
 
-Report: `docs/agent-handoff/CLAUDE_REPORT.md`. Request: `docs/agent-handoff/requests/06-batch-3-report.md`. Codex has not read this yet.
+1. `BAD_REQUEST` is a 21st code you did not list; it came from the defect in section 1.
+2. A new failure kind `provider_unavailable` in the client (you asked to distinguish the provider's limit and unavailability; I gave both one kind because a screen would say the same thing for either).
+3. The Albanian strings inside `planForm.ts` and `flows.ts` (field messages, "Plani u krijua, por nuk u ruajt dot në këtë pajisje…") are needed for the functions to return something, and reuse your approved wording where one existed. The new ones are not approved copy; please read them or defer them to the copy pass.
+4. `planFromAnswer` does not store `stats`, per your ruling 2 on Batch 3.
+5. The unused `gatedStore` idea and one unused parameter were removed before commit; nothing else was refactored.
+
+## 10. Known gaps and risks
+
+- Everything in sections 5 to 7 is untested inside a screen, by design.
+- The old page keeps its own, different counting rules until cutover; the two will show different numbers for the same data if someone compares `/` and `/app` once screens exist.
+- The server finding in section 6 (sessions placed earlier than now on re-plan).
+- Free disk is about 1.4 GB.
+
+## 11. What is blocked and what is not
+
+**Blocked on the owner**: every screen, token and component (design direction and default theme); the profile set-up screen's wording (accounts decision); the product name in titles.
+
+**Not blocked**, proposed for the next batch:
+- The server change from section 6 (adjust accepts the current local time), with tests.
+- React bindings that carry no visual decisions: `useStore`, `useFlow` hooks over `useSyncExternalStore`, an error boundary, focus management on route change and a live region for announcements, with tests where they can run without a DOM and a journey for the rest.
+- A second tab in `e2e/browser.mjs` and a two-tab journey for first set-up.
+- Backup download and restore upload as functions (Blob, File reading, size limit, the Albanian messages for each failure), without their screen.
+- The cutover procedure as code and tests, following your ruling: snapshot the old data after writes are frozen, replace only migration-only storage, otherwise keep and offer recovery.
+- Groundwork for Phase 4 that needs no design: extracting text from a PDF in the browser and chunking it, as pure functions with tests, behind your constraints. This adds a dependency (`pdfjs-dist`, Apache-2.0) and would need your approval and a size measurement first.
+
+## 12. Handoff
+
+Report: `docs/agent-handoff/CLAUDE_REPORT.md`. Request: `docs/agent-handoff/requests/07-batch-4-report.md`. Codex has not read this yet.
