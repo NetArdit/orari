@@ -33,10 +33,13 @@ describe("buildCalendarOrError", () => {
     });
 
     test("invalid dates, reversed dates and periods over 180 days give the safe Albanian message", () => {
-        assert.deepEqual(buildCalendarOrError(structured({ startDate: "2026-13-01" })), { error: "Datat e planit nuk janë valide." });
-        assert.deepEqual(buildCalendarOrError(structured({ startDate: "2026-02-31", endDate: "2026-03-04" })), { error: "Datat e planit nuk janë valide." });
-        assert.deepEqual(buildCalendarOrError(structured({ endDate: "2026-10-13" })), { error: "Data e fillimit duhet të jetë para datës së mbarimit." });
+        assert.equal(buildCalendarOrError(structured({ startDate: "2026-13-01" })).error, "Datat e planit nuk janë valide.");
+        assert.equal(buildCalendarOrError(structured({ startDate: "2026-02-31", endDate: "2026-03-04" })).error, "Datat e planit nuk janë valide.");
+        assert.equal(buildCalendarOrError(structured({ endDate: "2026-10-13" })).error, "Data e fillimit duhet të jetë para datës së mbarimit.");
+        assert.equal(buildCalendarOrError(structured({ startDate: "2026-13-01" })).code, "INVALID_DATES");
+        assert.equal(buildCalendarOrError(structured({ endDate: "2026-10-13" })).code, "DATES_REVERSED");
         assert.deepEqual(buildCalendarOrError(structured({ startDate: "2026-01-01", endDate: "2026-06-30" })), {
+            code: "PERIOD_TOO_LONG",
             error: "Periudha e planit është shumë e gjatë (maksimumi ~6 muaj).",
         });
     });

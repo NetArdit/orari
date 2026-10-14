@@ -2,6 +2,7 @@ import { test, describe, before, after, beforeEach, mock } from "node:test";
 import assert from "node:assert/strict";
 
 import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
+import http from "node:http";
 import { tmpdir } from "node:os";
 import path from "node:path";
 
@@ -112,29 +113,48 @@ describe("health, static files and generic errors", () => {
     test("an unknown API path answers 404 as JSON", async () => {
         const res = await fetch(base + "/api/nope");
         assert.equal(res.status, 404);
-        assert.deepEqual(await res.json(), { error: "API endpoint nuk u gjet." });
+        assert.equal((await res.json()).error, "API endpoint nuk u gjet.");
     });
 
     test("malformed JSON answers 400", async () => {
         const { status, json } = await post(base, "/api/parse", "{bad", true);
         assert.equal(status, 400);
-        assert.deepEqual(json, { error: "Kërkesa nuk është JSON valid." });
+        assert.equal(json.error, "Kërkesa nuk është JSON valid.");
     });
 
     test("a body over 100 kB answers 413", async () => {
         const { status, json } = await post(base, "/api/parse", { text: "a".repeat(150_000) });
         assert.equal(status, 413);
-        assert.deepEqual(json, { error: "Kërkesa është shumë e madhe." });
+        assert.equal(json.error, "Kërkesa është shumë e madhe.");
     });
 });
 
 describe("the new client at /app, beside the old page", () => {
     let withClient;
     let dir;
+    let outer;
+    const OUTSIDE = "OUTSIDE-THE-CLIENT-FOLDER-7f3a";
+
+    // fetch() tidies ".." out of an address before sending it; an attacker's tool does not.
+    const rawGet = (address) =>
+        new Promise((resolve, reject) => {
+            const { hostname, port } = new URL(withClient.base);
+            const req = http.request({ hostname, port, path: address, method: "GET" }, (res) => {
+                let body = "";
+                res.setEncoding("utf8");
+                res.on("data", (chunk) => (body += chunk));
+                res.on("end", () => resolve({ status: res.statusCode, body }));
+            });
+            req.on("error", reject);
+            req.end();
+        });
 
     before(async () => {
-        dir = mkdtempSync(path.join(tmpdir(), "orari-client-"));
-        mkdirSync(path.join(dir, "assets"));
+        // outer/ holds a file that must never be served; the client build lives in outer/client.
+        outer = mkdtempSync(path.join(tmpdir(), "orari-client-"));
+        writeFileSync(path.join(outer, "secret.txt"), OUTSIDE);
+        dir = path.join(outer, "client");
+        mkdirSync(path.join(dir, "assets"), { recursive: true });
         writeFileSync(path.join(dir, "index.html"), "<!doctype html><title>new client</title>");
         writeFileSync(path.join(dir, "assets", "index-abc123.js"), "console.log('client')");
         writeFileSync(path.join(dir, "favicon.svg"), "<svg xmlns='http://www.w3.org/2000/svg'/>");
@@ -142,7 +162,7 @@ describe("the new client at /app, beside the old page", () => {
     });
     after(async () => {
         await stop(withClient.server);
-        rmSync(dir, { recursive: true, force: true });
+        rmSync(outer, { recursive: true, force: true });
     });
 
     test("/app and every address under it get the client's page, not cached", async () => {
@@ -185,10 +205,40 @@ describe("the new client at /app, beside the old page", () => {
     });
 
     test("the client cannot be used to read files outside its folder", async () => {
-        for (const address of ["/app/../package.json", "/app/%2e%2e/package.json", "/app/assets/..%2f..%2fpackage.json"]) {
-            const res = await fetch(withClient.base + address);
-            assert.doesNotMatch(await res.text(), /"studyflow"/, address);
+        // The file exists and is readable from disk; only the server stands between it and the request.
+        const reachable = await rawGet("/app/favicon.svg");
+        assert.equal(reachable.status, 200);
+
+        const attempts = [
+            "/app/../secret.txt",
+            "/app/%2e%2e/secret.txt",
+            "/app/%2E%2E%2Fsecret.txt",
+            "/app/..%2fsecret.txt",
+            "/app/..%5csecret.txt",
+            "/app/assets/../../secret.txt",
+            "/app/assets/..%2f..%2fsecret.txt",
+            "/app/assets/%2e%2e/%2e%2e/secret.txt",
+            "/app/x/../../secret.txt",
+            "/app//../secret.txt",
+        ];
+        for (const address of attempts) {
+            const res = await rawGet(address);
+            assert.equal(res.body.includes(OUTSIDE), false, `${address} served the outside file`);
+            // Either refused, or answered with the client's own page like any other in-app address.
+            const isClientPage = res.status === 200 && res.body.includes("new client");
+            assert.ok([400, 403, 404].includes(res.status) || isClientPage, `${address} answered ${res.status}`);
         }
+    });
+
+    test("an address with a malformed escape does not crash the server", async () => {
+        const inApp = await rawGet("/app/%E0%A4%A");
+        assert.equal(inApp.status, 400);
+        assert.deepEqual(JSON.parse(inApp.body), { code: "BAD_REQUEST", error: "Kërkesa nuk është e vlefshme." });
+        // Outside /app no route tries to read the broken part, so these are simply not found.
+        for (const address of ["/%E0%A4%A", "/api/%E0%A4%A"]) {
+            assert.ok([400, 404].includes((await rawGet(address)).status), address);
+        }
+        assert.equal((await rawGet("/app/")).status, 200);
     });
 
     test("without a build, /app is not there and nothing else changes", async () => {
@@ -236,7 +286,7 @@ describe("P0-5: protecting the shared AI quota", () => {
             for (const path of ["/api/parse", "/api/create-plan", "/api/adjust-plan"]) {
                 const res = await fetch(limited.base + path, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text: "abc def" }) });
                 assert.equal(res.status, 429, path);
-                assert.deepEqual(await res.json(), { error: "Ke bërë shumë kërkesa njëra pas tjetrës. Prit pak minuta dhe provo përsëri." });
+                assert.equal((await res.json()).error, "Ke bërë shumë kërkesa njëra pas tjetrës. Prit pak minuta dhe provo përsëri.");
                 assert.ok(res.headers.get("retry-after"), "says when to come back");
             }
 
@@ -259,7 +309,7 @@ describe("P0-5: protecting the shared AI quota", () => {
             const second = await fetch(capped.base + "/api/parse", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text: "abc def" }) });
             assert.equal(second.status, 503);
             assert.equal(second.headers.get("retry-after"), "15");
-            assert.deepEqual(await second.json(), { error: "Shërbimi është i zënë për momentin. Provo përsëri pas pak." });
+            assert.equal((await second.json()).error, "Shërbimi është i zënë për momentin. Provo përsëri pas pak.");
             assert.equal(fake.parseCalls.length, 1);
 
             finishFirst();
@@ -297,7 +347,7 @@ describe("without an API key", () => {
         for (const path of ["/api/parse", "/api/create-plan", "/api/adjust-plan"]) {
             const { status, json } = await post(unconfigured.base, path, {});
             assert.equal(status, 503, path);
-            assert.deepEqual(json, { error: "AI nuk është konfiguruar ende." }, path);
+            assert.equal(json.error, "AI nuk është konfiguruar ende.", path);
         }
         assert.equal(fake.parseCalls.length + fake.planCalls.length, 0);
     });
@@ -355,7 +405,7 @@ describe("POST /api/parse", () => {
         fake.parse = async () => ({ ok: false, error: "malformed_json" });
         const { status, json } = await post(base, "/api/parse", { text: "abc def" });
         assert.equal(status, 502);
-        assert.deepEqual(json, { error: "AI gjeneroi një përgjigje të pavlefshme gjatë analizimit. Provo përsëri." });
+        assert.equal(json.error, "AI gjeneroi një përgjigje të pavlefshme gjatë analizimit. Provo përsëri.");
     });
 
     test("provider errors are mapped to safe messages and never leak provider text", async () => {
@@ -373,8 +423,101 @@ describe("POST /api/parse", () => {
             };
             const { status, json } = await post(base, "/api/parse", { text: "abc def" });
             assert.equal(status, expectedStatus, String(providerStatus));
-            assert.deepEqual(json, { error: expectedMessage }, String(providerStatus));
+            assert.equal(json.error, expectedMessage, String(providerStatus));
         }
+    });
+});
+
+describe("every error body carries a stable code beside its message", () => {
+    const adjust = (progress = {}, structured = {}) => ({ ...createBody({ startDate: "2026-10-10", endDate: "2026-10-16", ...structured }), progress: { today: "2026-10-15", ...progress } });
+    const thrown = (extra) => async () => {
+        throw Object.assign(new Error("provider detail"), extra);
+    };
+
+    test("requests refused before any AI work", async () => {
+        const cases = [
+            ["/api/parse", {}, 400, "VALIDATION"],
+            ["/api/create-plan", {}, 400, "VALIDATION"],
+            ["/api/adjust-plan", {}, 400, "VALIDATION"],
+            ["/api/create-plan", createBody({ startDate: "2026-10-20", endDate: "2026-10-14" }), 400, "DATES_REVERSED"],
+            ["/api/create-plan", createBody({ startDate: "2026-01-01", endDate: "2026-07-20" }), 400, "PERIOD_TOO_LONG"],
+            ["/api/create-plan", createBody({ weeklyAvailability: [{ day: "wed", off: true }, { day: "thu", off: true }] }), 400, "NO_FREE_TIME"],
+            ["/api/adjust-plan", adjust({ today: "2026-10-17" }), 400, "PLAN_FINISHED"],
+            ["/api/adjust-plan", adjust({}, { weeklyAvailability: [{ day: "thu", off: true }, { day: "fri", off: true }] }), 400, "NO_FREE_TIME"],
+        ];
+        for (const [path, body, status, code] of cases) {
+            const res = await post(base, path, body);
+            assert.deepEqual([res.status, res.json.code], [status, code], `${path} ${code}`);
+            assert.equal(typeof res.json.error, "string");
+        }
+        assert.equal(fake.parseCalls.length + fake.planCalls.length, 0);
+    });
+
+    test("malformed JSON, oversized bodies and unknown API paths", async () => {
+        assert.equal((await post(base, "/api/parse", "{bad", true)).json.code, "BAD_JSON");
+        assert.equal((await post(base, "/api/parse", { text: "a".repeat(150_000) })).json.code, "BODY_TOO_LARGE");
+        assert.equal((await (await fetch(base + "/api/nope")).json()).code, "NOT_FOUND");
+    });
+
+    test("what the AI or its provider did, each with its own code", async () => {
+        const cases = [
+            [thrown({ status: 401 }), 503, "AI_NOT_CONFIGURED"],
+            [thrown({ status: 429 }), 503, "PROVIDER_RATE_LIMITED"],
+            [thrown({ status: 402 }), 503, "PROVIDER_UNAVAILABLE"],
+            [thrown({ status: 400 }), 502, "AI_REJECTED_REQUEST"],
+            [thrown({ status: 500 }), 502, "AI_FAILED"],
+            [thrown({}), 502, "AI_FAILED"],
+            [thrown({ code: "AI_DEADLINE" }), 504, "AI_TIMEOUT"],
+            [async () => ({ ok: false, error: "malformed_json" }), 502, "AI_UNUSABLE_ANSWER"],
+            [async () => ({ ok: true, data: planData([planSession("2026-10-14", "03:00", "04:00")]) }), 502, "AI_NO_USABLE_SESSIONS"],
+        ];
+        for (const [behaviour, status, code] of cases) {
+            fake.plan = behaviour;
+            const res = await post(base, "/api/create-plan", createBody());
+            assert.deepEqual([res.status, res.json.code], [status, code], code);
+        }
+        fake.parse = async () => ({ ok: false, error: "malformed_json" });
+        assert.equal((await post(base, "/api/parse", { text: "abc def" })).json.code, "AI_UNUSABLE_ANSWER");
+    });
+
+    test("the three different 503s are told apart by code, not by wording", async () => {
+        const unconfigured = await start({ aiConfigured: false });
+        const capped = await start({ maxConcurrentAi: 0 });
+        try {
+            fake.plan = thrown({ status: 429 });
+            const codes = [
+                (await post(unconfigured.base, "/api/create-plan", createBody())).json.code,
+                (await post(capped.base, "/api/create-plan", createBody())).json.code,
+                (await post(base, "/api/create-plan", createBody())).json.code,
+            ];
+            assert.deepEqual(codes, ["AI_NOT_CONFIGURED", "SERVER_BUSY", "PROVIDER_RATE_LIMITED"]);
+        } finally {
+            await stop(unconfigured.server);
+            await stop(capped.server);
+        }
+    });
+
+    test("a client over its limit gets RATE_LIMITED", async () => {
+        const limited = await start({ rateLimit: { windowMs: 60_000, limit: 1 } });
+        try {
+            await post(limited.base, "/api/parse", { text: "abc def" });
+            const res = await post(limited.base, "/api/parse", { text: "abc def" });
+            assert.deepEqual([res.status, res.json.code], [429, "RATE_LIMITED"]);
+        } finally {
+            await stop(limited.server);
+        }
+    });
+
+    test("every code the server can send is in the published list, and the list has no duplicates", async () => {
+        const { ERROR_CODES } = await import("../lib/schema.js");
+        const { readFileSync } = await import("node:fs");
+        const used = new Set();
+        for (const file of ["lib/app.js", "lib/plan.js"]) {
+            for (const match of readFileSync(new URL("../" + file, import.meta.url), "utf8").matchAll(/(?:code|errorCode): "([A-Z_]+)"/g)) used.add(match[1]);
+        }
+        assert.equal(new Set(ERROR_CODES).size, ERROR_CODES.length);
+        assert.deepEqual([...used].filter((code) => !ERROR_CODES.includes(code)), []);
+        assert.deepEqual(ERROR_CODES.filter((code) => !used.has(code)), []);
     });
 });
 
@@ -389,7 +532,7 @@ describe("P1-1: deadline and cancellation", () => {
         for (const [path, body] of [["/api/parse", { text: "abc def" }], ["/api/create-plan", createBody()], ["/api/adjust-plan", adjust]]) {
             const { status, json } = await post(base, path, body);
             assert.equal(status, 504, path);
-            assert.deepEqual(json, { error: "AI po vonon më shumë se zakonisht. Provo përsëri pas pak." }, path);
+            assert.equal(json.error, "AI po vonon më shumë se zakonisht. Provo përsëri pas pak.", path);
         }
     });
 
@@ -558,6 +701,7 @@ describe("POST /api/create-plan", () => {
         const { status, json } = await post(base, "/api/create-plan", createBody({ startDate: "2026-02-31", endDate: "2026-03-04" }));
         assert.equal(status, 400);
         assert.deepEqual(json, {
+            code: "VALIDATION",
             error: "Datat e planit nuk janë valide.",
             fields: [{ path: "structured.startDate", message: "Data nuk është e vlefshme." }],
         });
@@ -568,7 +712,7 @@ describe("POST /api/create-plan", () => {
         const body = createBody({ weeklyAvailability: [{ day: "wed", off: true }, { day: "thu", off: true }] });
         const { status, json } = await post(base, "/api/create-plan", body);
         assert.equal(status, 400);
-        assert.deepEqual(json, { error: "Nuk gjenden dritare kohore të lira në periudhën e zgjedhur. Kontrollo disponueshmërinë dhe angazhimet." });
+        assert.equal(json.error, "Nuk gjenden dritare kohore të lira në periudhën e zgjedhur. Kontrollo disponueshmërinë dhe angazhimet.");
         assert.equal(fake.planCalls.length, 0);
     });
 
@@ -576,7 +720,7 @@ describe("POST /api/create-plan", () => {
         fake.plan = async () => ({ ok: true, data: planData([planSession("2026-10-14", "03:00", "04:00")]) });
         const { status, json } = await post(base, "/api/create-plan", createBody());
         assert.equal(status, 502);
-        assert.deepEqual(json, { error: "AI nuk arriti të vendoste asnjë seancë në kohën që ke të lirë. Provo përsëri." });
+        assert.equal(json.error, "AI nuk arriti të vendoste asnjë seancë në kohën që ke të lirë. Provo përsëri.");
     });
 
     test("P1-4: one removed session is reported in the singular", async () => {
@@ -589,14 +733,14 @@ describe("POST /api/create-plan", () => {
         fake.plan = async () => ({ ok: false, error: "schema_validation_failed" });
         let res = await post(base, "/api/create-plan", createBody());
         assert.equal(res.status, 502);
-        assert.deepEqual(res.json, { error: "AI gjeneroi një plan të paplotë. Provo përsëri." });
+        assert.equal(res.json.error, "AI gjeneroi një plan të paplotë. Provo përsëri.");
 
         fake.plan = async () => {
             throw Object.assign(new Error("rate limited upstream"), { status: 429 });
         };
         res = await post(base, "/api/create-plan", createBody());
         assert.equal(res.status, 503);
-        assert.deepEqual(res.json, { error: "Shërbimi AI ka arritur kufirin e përdorimit. Provo më vonë." });
+        assert.equal(res.json.error, "Shërbimi AI ka arritur kufirin e përdorimit. Provo më vonë.");
     });
 });
 
@@ -661,21 +805,21 @@ describe("POST /api/adjust-plan", () => {
         fake.plan = async () => ({ ok: true, data: planData([planSession("2026-10-15", "03:00", "04:00")]) });
         res = await post(base, "/api/adjust-plan", adjustBody());
         assert.equal(res.status, 502);
-        assert.deepEqual(res.json, { error: "AI nuk arriti të vendoste asnjë seancë në kohën që ke të lirë. Provo përsëri." });
+        assert.equal(res.json.error, "AI nuk arriti të vendoste asnjë seancë në kohën që ke të lirë. Provo përsëri.");
     });
 
     test("P1-4: with no free time left, adjust answers 400 and does not call the AI", async () => {
         const body = adjustBody({}, { weeklyAvailability: [{ day: "thu", off: true }, { day: "fri", off: true }] });
         const { status, json } = await post(base, "/api/adjust-plan", body);
         assert.equal(status, 400);
-        assert.deepEqual(json, { error: "Nuk ka mbetur kohë e lirë deri në fund të planit. Zgjate afatin ose shto më shumë kohë të lirë." });
+        assert.equal(json.error, "Nuk ka mbetur kohë e lirë deri në fund të planit. Zgjate afatin ose shto më shumë kohë të lirë.");
         assert.equal(fake.planCalls.length, 0);
     });
 
     test("P1-4: a plan whose end date has passed gets its own message", async () => {
         const { status, json } = await post(base, "/api/adjust-plan", adjustBody({ today: "2026-10-17" }));
         assert.equal(status, 400);
-        assert.deepEqual(json, { error: "Ky plan ka përfunduar dhe nuk ka më ditë për ta rregulluar. Krijo një plan të ri." });
+        assert.equal(json.error, "Ky plan ka përfunduar dhe nuk ka më ditë për ta rregulluar. Krijo një plan të ri.");
         assert.equal(fake.planCalls.length, 0);
     });
 
@@ -690,14 +834,14 @@ describe("POST /api/adjust-plan", () => {
         fake.plan = async () => ({ ok: false, error: "insufficient_extraction" });
         let res = await post(base, "/api/adjust-plan", adjustBody());
         assert.equal(res.status, 502);
-        assert.deepEqual(res.json, { error: "AI gjeneroi një plan të paplotë. Provo përsëri." });
+        assert.equal(res.json.error, "AI gjeneroi një plan të paplotë. Provo përsëri.");
 
         fake.plan = async () => {
             throw Object.assign(new Error("no credits"), { status: 402 });
         };
         res = await post(base, "/api/adjust-plan", adjustBody());
         assert.equal(res.status, 503);
-        assert.deepEqual(res.json, { error: "Modeli AI nuk është i disponueshëm për momentin." });
+        assert.equal(res.json.error, "Modeli AI nuk është i disponueshëm për momentin.");
     });
 });
 
