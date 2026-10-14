@@ -1,6 +1,6 @@
 import dotenv from "dotenv";
 import { createApp } from "./lib/app.js";
-import { parseNaturalLanguageRequest, generateStudyPlan } from "./lib/ai.js";
+import { createAi, resolveModels } from "./lib/ai.js";
 
 dotenv.config();
 
@@ -18,6 +18,17 @@ if (!AI_CONFIGURED) {
     // the whole app being unreachable.
     console.error("WARNING: OPENROUTER_API_KEY mungon në .env - funksionet AI do të kthejnë gabim.");
 }
+
+// A wrong model list is a mistake in the settings: say so and stop, rather than fail on every request later.
+let models;
+try {
+    models = resolveModels(process.env.OPENROUTER_MODELS);
+} catch (error) {
+    console.error("ERROR:", error.message);
+    process.exit(1);
+}
+
+const { parseNaturalLanguageRequest, generateStudyPlan } = createAi({ models });
 
 const app = createApp({
     aiConfigured: AI_CONFIGURED,

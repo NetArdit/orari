@@ -3,7 +3,7 @@
  *   one synthetic parse, one short synthetic plan, on one model confirmed free beforehand,
  *   no retry, no fallback to another model, no repair attempt.
  *
- *   node docs/agent-handoff/evidence/batch-6/live-ai.mjs <model-id>
+ *   node docs/agent-handoff/evidence/batch-6/live-ai.mjs <model-id> [result-file-name]
  *
  * It uses the app's own prompts and validation (lib/ai.js) through a client that lets exactly one
  * request through per call and refuses any further one, so the app's retry and repair logic cannot
@@ -115,5 +115,5 @@ const summary = {
     },
 };
 
-writeFileSync(path.join(HERE, "live-ai.json"), JSON.stringify(summary, null, 2));
+writeFileSync(path.join(HERE, process.argv[3] ?? "live-ai.json"), JSON.stringify(summary, null, 2));
 console.log(JSON.stringify(summary, null, 2));

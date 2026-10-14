@@ -1,7 +1,7 @@
 import { test, describe, beforeEach, mock } from "node:test";
 import assert from "node:assert/strict";
 
-import { createAi, DEFAULT_MODELS, DEFAULT_DEADLINE_MS } from "../lib/ai.js";
+import { createAi, resolveModels, DEFAULT_MODELS, DEFAULT_DEADLINE_MS, MAX_MODELS } from "../lib/ai.js";
 
 /* The model walk, the retries and the repair loop, against a scripted fake client.
    No network: the fake stands in for the OpenAI SDK object. */
@@ -65,10 +65,55 @@ beforeEach(() => {
 });
 
 describe("defaults", () => {
-    test("four free models and a 75 second deadline", () => {
-        assert.equal(DEFAULT_MODELS.length, 4);
+    test("free models only, without the one OpenRouter no longer lists, and a 75 second deadline", () => {
+        assert.deepEqual(DEFAULT_MODELS, ["google/gemma-4-31b-it:free", "dots-studio/dots-3-note-preview:free", "liquid/lfm-2.5-2.6b:free"]);
         assert.ok(DEFAULT_MODELS.every((m) => m.endsWith(":free")));
+        assert.equal(DEFAULT_MODELS.includes("z-ai/glm-5.2:free"), false);
         assert.equal(DEFAULT_DEADLINE_MS, 75_000);
+    });
+});
+
+describe("the model list is configuration, checked locally", () => {
+    test("nothing set, or only blanks: the defaults, as a copy", () => {
+        assert.deepEqual(resolveModels(undefined), DEFAULT_MODELS);
+        assert.deepEqual(resolveModels("  "), DEFAULT_MODELS);
+        resolveModels(undefined).push("x");
+        assert.equal(DEFAULT_MODELS.length, 3);
+    });
+
+    test("a comma-separated list is used in the order given, with spaces and empty items tolerated", () => {
+        assert.deepEqual(resolveModels(" meta/llama-5:free ,, google/gemma-4-31b-it:free "), ["meta/llama-5:free", "google/gemma-4-31b-it:free"]);
+    });
+
+    test("a model that is not free is refused: there is no paid fallback", () => {
+        for (const bad of ["openai/gpt-5", "anthropic/claude-sonnet-5-5", "google/gemma-4-31b-it", "google/gemma-4-31b-it:free,openai/gpt-5", "vendor/model:free-trial"]) {
+            assert.throws(() => resolveModels(bad), /not a free model/, bad);
+        }
+    });
+
+    test("ids that are not of the form vendor/name:free, an empty list, repeats and too many are refused with a message", () => {
+        assert.throws(() => resolveModels("gemma:free"), /not a valid model id/);
+        assert.throws(() => resolveModels("a b/c:free"), /not a valid model id/);
+        assert.throws(() => resolveModels("/x:free"), /not a valid model id/);
+        assert.throws(() => resolveModels("../x:free"), /not a valid model id/);
+        assert.throws(() => resolveModels(",,"), /holds no model id/);
+        assert.throws(() => resolveModels("a/b:free,a/b:free"), /same model twice/);
+        const many = Array.from({ length: MAX_MODELS + 1 }, (_, i) => `v/m${i}:free`).join(",");
+        assert.throws(() => resolveModels(many), /at most 8/);
+        assert.equal(resolveModels(many.split(",").slice(0, MAX_MODELS).join(",")).length, MAX_MODELS);
+    });
+
+    test("resolving the list makes no network request", () => {
+        const before = globalThis.fetch;
+        globalThis.fetch = () => {
+            throw new Error("network used");
+        };
+        try {
+            assert.equal(resolveModels(undefined).length, 3);
+            assert.equal(resolveModels("a/b:free").length, 1);
+        } finally {
+            globalThis.fetch = before;
+        }
     });
 });
 

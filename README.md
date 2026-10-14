@@ -33,6 +33,7 @@ On its first start the new client copies the profile and plans the old page stor
 | Variable | Needed | Meaning |
 |---|---|---|
 | `OPENROUTER_API_KEY` | for AI features | Key from openrouter.ai. Only free models are used (the list is in `lib/ai.js`). |
+| `OPENROUTER_MODELS` | no | Models to try, in order, comma-separated; every id must end in `:free` (there is no paid fallback). Checked for shape at start-up; the server stops with a message if it is wrong. Defaults are in `lib/ai.js`. |
 | `PORT` | no | Port to listen on. Default 3000. |
 
 ## Where your data is
