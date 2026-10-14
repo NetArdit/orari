@@ -1,6 +1,6 @@
 import dotenv from "dotenv";
 import { createApp } from "./lib/app.js";
-import { createAi, resolveModels } from "./lib/ai.js";
+import { createAi, createProviderClient, resolveProvider } from "./lib/ai.js";
 import { createAccounts } from "./lib/accounts/http.js";
 import { createMemoryAccountsRepository } from "./lib/accounts/memoryRepository.js";
 import { createPasswordHasher } from "./lib/accounts/password.js";
@@ -17,25 +17,26 @@ dotenv.config();
 
 const PORT = process.env.PORT || 3000;
 
-const AI_CONFIGURED = Boolean(process.env.OPENROUTER_API_KEY);
-
-if (!AI_CONFIGURED) {
-    // We do NOT exit here - the server should still boot so the frontend
-    // loads and can show a clear "AI not configured" message instead of
-    // the whole app being unreachable.
-    console.error("WARNING: OPENROUTER_API_KEY mungon në .env - funksionet AI do të kthejnë gabim.");
-}
-
-// A wrong model list is a mistake in the settings: say so and stop, rather than fail on every request later.
-let models;
+let provider;
 try {
-    models = resolveModels(process.env.OPENROUTER_MODELS);
+    provider = resolveProvider(process.env);
 } catch (error) {
     console.error("ERROR:", error.message);
     process.exit(1);
 }
 
-const { parseNaturalLanguageRequest, generateStudyPlan } = createAi({ models });
+const AI_CONFIGURED = Boolean(provider.apiKey);
+
+if (!AI_CONFIGURED) {
+    // We do NOT exit here - the server should still boot so the frontend
+    // loads and can show a clear "AI not configured" message instead of
+    // the whole app being unreachable.
+    console.error(`WARNING: ${provider.keyName} mungon në .env - funksionet AI do të kthejnë gabim.`);
+}
+
+const models = provider.models;
+
+const { parseNaturalLanguageRequest, generateStudyPlan } = createAi({ models, ...(AI_CONFIGURED ? { client: createProviderClient(provider) } : {}) });
 
 /* Accounts exist only when asked for, and only in memory for now: no database, no mail provider and
    no host have been chosen. Everything is lost when the process stops, and the page says so. */
@@ -81,7 +82,7 @@ const app = createApp({
 const server = app.listen(PORT, ...(HOST ? [HOST] : []), () => {
     console.log(`StudyFlow running at http://localhost:${PORT}`);
     if (!AI_CONFIGURED) {
-        console.log("-> AI features are disabled until OPENROUTER_API_KEY is set in .env");
+        console.log(`-> AI features are disabled until ${provider.keyName} is set in .env`);
     }
 });
 
