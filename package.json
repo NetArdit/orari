@@ -6,8 +6,13 @@
   "scripts": {
     "start": "node server.js",
     "dev": "node --watch server.js",
-    "test": "node --test --test-timeout=30000",
-    "check": "node --check server.js && node --check lib/app.js && node --check lib/plan.js && node --check lib/ai.js && node --check lib/schema.js && node --check lib/time.js && node --check public/script.js"
+    "test": "node --test --test-timeout=30000 \"test/**/*.test.js\"",
+    "check": "node --check server.js && node --check lib/app.js && node --check lib/plan.js && node --check lib/ai.js && node --check lib/schema.js && node --check lib/time.js && node --check public/script.js",
+    "client:dev": "vite client",
+    "client:build": "tsc -p client && vite build client",
+    "client:typecheck": "tsc -p client",
+    "client:test": "vitest run --root client",
+    "test:all": "npm test && npm run client:typecheck && npm run client:test"
   },
   "dependencies": {
     "dotenv": "^16.6.1",
@@ -15,9 +20,21 @@
     "express-rate-limit": "^8.7.1",
     "helmet": "^8.3.0",
     "openai": "^7.5.0",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
     "zod": "^3.24.1"
   },
   "engines": {
     "node": ">=22"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.3.3",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^6.1.2",
+    "tailwindcss": "^4.3.3",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.4",
+    "vitest": "^5.0.4"
   }
 }

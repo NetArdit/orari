@@ -1,6 +1,10 @@
 import { test, describe, before, after, beforeEach, mock } from "node:test";
 import assert from "node:assert/strict";
 
+import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import path from "node:path";
+
 import { createApp } from "../lib/app.js";
 
 /* Every route runs against a fake AI. Nothing here reaches the network beyond 127.0.0.1. */
@@ -16,6 +20,7 @@ const fake = {
 
 function start(options = {}) {
     const app = createApp({
+        clientDir: path.join(tmpdir(), "orari-no-client-build"), // no new client unless a test provides one
         aiConfigured: true,
         parseNaturalLanguageRequest: async (...args) => {
             fake.parseCalls.push(args);
@@ -120,6 +125,76 @@ describe("health, static files and generic errors", () => {
         const { status, json } = await post(base, "/api/parse", { text: "a".repeat(150_000) });
         assert.equal(status, 413);
         assert.deepEqual(json, { error: "Kërkesa është shumë e madhe." });
+    });
+});
+
+describe("the new client at /app, beside the old page", () => {
+    let withClient;
+    let dir;
+
+    before(async () => {
+        dir = mkdtempSync(path.join(tmpdir(), "orari-client-"));
+        mkdirSync(path.join(dir, "assets"));
+        writeFileSync(path.join(dir, "index.html"), "<!doctype html><title>new client</title>");
+        writeFileSync(path.join(dir, "assets", "index-abc123.js"), "console.log('client')");
+        writeFileSync(path.join(dir, "favicon.svg"), "<svg xmlns='http://www.w3.org/2000/svg'/>");
+        withClient = await start({ clientDir: dir });
+    });
+    after(async () => {
+        await stop(withClient.server);
+        rmSync(dir, { recursive: true, force: true });
+    });
+
+    test("/app and every address under it get the client's page, not cached", async () => {
+        for (const address of ["/app", "/app/", "/app/orari", "/app/planet/abc/seanca/s1", "/app/nuk-ekziston"]) {
+            const res = await fetch(withClient.base + address);
+            assert.equal(res.status, 200, address);
+            assert.match(res.headers.get("content-type"), /text\/html/, address);
+            assert.equal(res.headers.get("cache-control"), "no-cache", address);
+            assert.match(await res.text(), /new client/, address);
+        }
+    });
+
+    test("hashed assets are served and may be cached for good", async () => {
+        const res = await fetch(withClient.base + "/app/assets/index-abc123.js");
+        assert.equal(res.status, 200);
+        assert.match(res.headers.get("content-type"), /javascript/);
+        assert.match(res.headers.get("cache-control"), /max-age=31536000, immutable/);
+        assert.equal(await res.text(), "console.log('client')");
+    });
+
+    test("a missing asset is a 404, never the HTML page", async () => {
+        const res = await fetch(withClient.base + "/app/assets/gone-000.js");
+        assert.equal(res.status, 404);
+        assert.doesNotMatch(await res.text(), /new client/);
+    });
+
+    test("other files of the build are served as themselves", async () => {
+        const res = await fetch(withClient.base + "/app/favicon.svg");
+        assert.equal(res.status, 200);
+        assert.match(res.headers.get("content-type"), /svg/);
+    });
+
+    test("the old page, the API and the security headers are unchanged", async () => {
+        assert.match(await (await fetch(withClient.base + "/")).text(), /<title>StudyFlow<\/title>/);
+        assert.equal((await fetch(withClient.base + "/api/health")).status, 200);
+        assert.equal((await fetch(withClient.base + "/api/nope")).status, 404);
+        assert.equal((await fetch(withClient.base + "/application")).status, 404);
+        const csp = (await fetch(withClient.base + "/app/orari")).headers.get("content-security-policy");
+        assert.match(csp, /script-src 'self'(;|$)/);
+    });
+
+    test("the client cannot be used to read files outside its folder", async () => {
+        for (const address of ["/app/../package.json", "/app/%2e%2e/package.json", "/app/assets/..%2f..%2fpackage.json"]) {
+            const res = await fetch(withClient.base + address);
+            assert.doesNotMatch(await res.text(), /"studyflow"/, address);
+        }
+    });
+
+    test("without a build, /app is not there and nothing else changes", async () => {
+        assert.equal((await fetch(base + "/app")).status, 404);
+        assert.equal((await fetch(base + "/app/orari")).status, 404);
+        assert.equal((await fetch(base + "/")).status, 200);
     });
 });
 
