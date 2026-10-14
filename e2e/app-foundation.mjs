@@ -67,7 +67,7 @@ await browser.run(async () => {
     browser.result.base = BASE;
 
     /* ---------- 1. A device that has never been used ---------- */
-    await goto(BASE + "/app");
+    await goto(BASE + "/app/une");
     await ready();
     check("fresh device: nothing to copy, no profile, no plans", (await evaluate(`document.querySelector('[data-testid="migration"]').dataset.status`)) === "nothing_to_migrate" && (await text("profile")) === "Profili: ende pa profil" && (await text("plans")) === "Plane në këtë pajisje: 0");
     check("fresh device: nothing is written to storage", same(await readDatabase(), {}), await readDatabase());
@@ -78,7 +78,7 @@ await browser.run(async () => {
     await evaluate(`localStorage.setItem("studyflow_users", ${JSON.stringify("[" + user + "]")}); localStorage.setItem("studyflow_current_user", ${JSON.stringify(user)});`);
     const legacyBefore = await evaluate(`[localStorage.getItem("studyflow_users"), localStorage.getItem("studyflow_current_user")]`);
 
-    await goto(BASE + "/app");
+    await goto(BASE + "/app/une");
     await ready();
     check("old data: copied on the first start", (await evaluate(`document.querySelector('[data-testid="migration"]').dataset.status`)) === "migrated", await text("migration"));
     check("old data: the profile and both plans are there", (await text("profile")) === "Profili: Arta Krasniqi" && (await text("plans")) === "Plane në këtë pajisje: 2", [await text("profile"), await text("plans")]);
@@ -100,7 +100,7 @@ await browser.run(async () => {
     check("the old page's keys are untouched, byte for byte", same(legacyBefore, legacyAfter));
 
     /* ---------- 3. Starting again ---------- */
-    await goto(BASE + "/app");
+    await goto(BASE + "/app/une");
     await ready();
     check("second start: nothing is copied again and the data is still there", (await evaluate(`document.querySelector('[data-testid="migration"]').dataset.status`)) === "already_set_up" && (await text("plans")) === "Plane në këtë pajisje: 2");
     check("second start: storage is identical", same(await readDatabase(), db));
@@ -109,29 +109,31 @@ await browser.run(async () => {
     await evaluate(`window.__samePage = true`);
     await evaluate(`[...document.querySelectorAll("nav a")].find((a) => a.textContent === "Orari").click()`);
     await sleep(150);
-    check("a link changes the address and the screen without reloading the page", (await evaluate(`[location.pathname, document.querySelector('[data-testid="screen"]').textContent, window.__samePage === true, document.title]`)).join("|") === "/app/orari|Orari|true|Orari · Planifikuesi", await evaluate(`[location.pathname, document.querySelector('[data-testid="screen"]').textContent, window.__samePage, document.title]`));
+    check("a link changes the address and the screen without reloading the page", (await evaluate(`[location.pathname, document.querySelector("main h1").textContent, window.__samePage === true, document.title]`)).join("|") === "/app/orari|Orari i javës|true|Orari i javës · Orari", await evaluate(`[location.pathname, document.querySelector("main h1").textContent, window.__samePage, document.title]`));
     check("the current screen is marked for assistive technology", (await evaluate(`[...document.querySelectorAll('nav a[aria-current="page"]')].map((a) => a.textContent).join()`)) === "Orari");
     await evaluate(`history.back()`);
     await sleep(150);
-    check("Back returns to the previous screen", (await evaluate(`[location.pathname, document.querySelector('[data-testid="screen"]').textContent]`)).join("|") === "/app/|Sot", await evaluate(`location.pathname`)); // the server sends /app on to /app/
+    check("Back returns to the previous screen", (await evaluate(`[location.pathname, document.querySelector("main h1").textContent]`)).join("|") === "/app/une|Cilësimet", await evaluate(`location.pathname`)); // the server sends /app on to /app/
 
     await goto(BASE + "/app/planet/plan-1/seanca/s1");
-    await ready();
-    check("a deep address opens its screen directly", (await evaluate(`document.querySelector('[data-testid="screen"]').textContent`)) === "Një seancë");
+    await waitFor(`Boolean(document.querySelector("main h1"))`, "a screen");
+    check("a deep address opens its screen directly", (await evaluate(`document.querySelector("main h1").textContent`)) === "E kryer");
     await goto(BASE + "/app/nuk-ekziston");
-    await ready();
-    check("an unknown address says so and offers a way back", (await evaluate(`document.querySelector('[data-testid="screen"]').textContent`)) === "Kjo faqe nuk ekziston" && (await evaluate(`Boolean([...document.querySelectorAll("main a")].find((a) => a.textContent === "Kthehu te Sot"))`)));
+    await waitFor(`Boolean(document.querySelector("main h2"))`, "a screen");
+    check("an unknown address says so and offers a way back", (await evaluate(`document.querySelector("main h2").textContent`)) === "Kjo faqe nuk ekziston" && (await evaluate(`Boolean([...document.querySelectorAll("main a")].find((a) => a.textContent === "Kthehu te Sot"))`)));
 
     /* ---------- 5. Keyboard and phone width ---------- */
-    await goto(BASE + "/app");
+    await goto(BASE + "/app/une");
     await ready();
-    await cdp.send("Input.dispatchKeyEvent", { type: "keyDown", key: "Tab", code: "Tab", windowsVirtualKeyCode: 9 });
-    await cdp.send("Input.dispatchKeyEvent", { type: "keyUp", key: "Tab", code: "Tab", windowsVirtualKeyCode: 9 });
+    for (let i = 0; i < 2; i++) {
+        await cdp.send("Input.dispatchKeyEvent", { type: "keyDown", key: "Tab", code: "Tab", windowsVirtualKeyCode: 9 });
+        await cdp.send("Input.dispatchKeyEvent", { type: "keyUp", key: "Tab", code: "Tab", windowsVirtualKeyCode: 9 });
+    }
     const focused = await evaluate(`(() => { const el = document.activeElement; const s = getComputedStyle(el); return { text: el.textContent, outline: s.outlineStyle, height: Math.round(el.getBoundingClientRect().height) }; })()`);
-    check("Tab reaches the first navigation link, with a visible focus outline and a 44 px target", focused.text === "Sot" && focused.outline !== "none" && focused.height >= 44, focused);
+    check("two Tabs (past the skip link) reach the first navigation link, with a visible focus outline and a 44 px target", focused.text === "Sot" && focused.outline !== "none" && focused.height >= 44, focused);
 
     await cdp.send("Emulation.setDeviceMetricsOverride", { width: 360, height: 800, deviceScaleFactor: 1, mobile: true });
-    await goto(BASE + "/app");
+    await goto(BASE + "/app/une");
     await ready();
     const widths = await evaluate(`({ inner: window.innerWidth, scroll: document.documentElement.scrollWidth })`);
     check("at 360 px the page is 360 px wide: nothing is cut off or shrunk", widths.inner === 360 && widths.scroll === 360, widths);

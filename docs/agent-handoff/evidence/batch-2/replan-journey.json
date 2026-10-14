@@ -1,6 +1,6 @@
 {
   "base": "http://127.0.0.1:3987",
-  "startedAt": "2026-10-13T23:46:50.193Z",
+  "startedAt": "2026-10-14T14:09:04.019Z",
   "browser": "Edg/155.0.4283.45",
   "today": "2026-10-14",
   "checks": [
@@ -13,6 +13,7 @@
       "pass": true,
       "detail": {
         "today": "2026-10-14",
+        "now": "16:09",
         "completedSessionSummaries": [
           "2026-10-12 KEEP past completed (completed)",
           "2026-10-14 KEEP today completed (completed)",
@@ -24,6 +25,14 @@
           "2026-10-14 KEEP today skipped"
         ],
         "remainingMaterialNote": null
+      }
+    },
+    {
+      "name": "the request tells the server the time of day, so today is planned only from now on",
+      "pass": true,
+      "detail": {
+        "sent": "16:09",
+        "pageNow": "16:09"
       }
     },
     {

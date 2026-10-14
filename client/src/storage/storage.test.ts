@@ -262,6 +262,34 @@ describe("two tabs at once", () => {
     });
 });
 
+describe("the look chosen on this device", () => {
+    test("nothing saved reads as null; what is saved is read back", async () => {
+        const repo = createRepository(createMemoryStore(), fixedNow);
+        expect(await repo.getAppearance()).toBeNull();
+        await repo.saveAppearance({ layoutStyle: "blocks", colorMode: "dark" });
+        expect(await repo.getAppearance()).toEqual({ layoutStyle: "blocks", colorMode: "dark" });
+    });
+
+    test("a damaged record reads as the defaults field by field, and saving cleans what is written", async () => {
+        const store = createMemoryStore({ appearance: { layoutStyle: "blocks", colorMode: "purple", extra: 1 } });
+        const repo = createRepository(store, fixedNow);
+        expect(await repo.getAppearance()).toEqual({ layoutStyle: "blocks", colorMode: "system" });
+
+        await repo.saveAppearance({ layoutStyle: "nope", colorMode: "light" } as never);
+        expect(store.dump().appearance).toEqual({ layoutStyle: "notebook", colorMode: "light" });
+    });
+
+    test("the look is separate from the data: a restore and a profile save leave it alone", async () => {
+        const store = createMemoryStore();
+        const repo = createRepository(store, fixedNow);
+        await repo.initialise(profile, [plan("p1")], { fromLegacy: false });
+        await repo.saveAppearance({ layoutStyle: "blocks", colorMode: "dark" });
+        await repo.restoreBackup({ format: "planifikues-kopje", schemaVersion: 1, exportedAt: "x", profile, plans: [] });
+        await repo.saveProfile({ ...profile, name: "Besa" });
+        expect(await repo.getAppearance()).toEqual({ layoutStyle: "blocks", colorMode: "dark" });
+    });
+});
+
 describe("backup and restore", () => {
     test("plans that repeat an id inside the backup are not merged: the first is kept, the rest are counted", async () => {
         const repo = createRepository(createMemoryStore(), fixedNow);

@@ -1,11 +1,14 @@
 import { BackupFile, SCHEMA_VERSION, StoredMeta, StoredPlan, StoredProfile } from "./model.ts";
 import type { SessionStatus } from "./model.ts";
+import { parseAppearance } from "../settings/appearance.ts";
+import type { Appearance } from "../settings/appearance.ts";
 import { PreconditionFailedError } from "./store.ts";
 import type { KeyValueStore, Write } from "./store.ts";
 
 const META = "meta";
 const PROFILE = "profile";
 const PLAN = "plan:";
+const APPEARANCE = "appearance";
 
 export class StorageTooNewError extends Error {
     constructor(public readonly found: number) {
@@ -94,6 +97,16 @@ export function createRepository(store: KeyValueStore, now: () => Date = () => n
                 if (error instanceof PreconditionFailedError) throw new AlreadySetUpError();
                 throw error;
             }
+        },
+
+        /** The look chosen on this device, or null if none was ever saved. Damaged values read as the defaults, field by field. */
+        async getAppearance(): Promise<Appearance | null> {
+            const raw = await store.get(APPEARANCE);
+            return raw === undefined ? null : parseAppearance(raw);
+        },
+
+        async saveAppearance(appearance: Appearance): Promise<void> {
+            await store.commit([{ key: APPEARANCE, value: parseAppearance(appearance) }]);
         },
 
         async saveProfile(profile: StoredProfile): Promise<void> {

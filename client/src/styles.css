@@ -1,3 +1,156 @@
 @import "tailwindcss";
 
-/* Neutral on purpose: the look is chosen by the owner from docs/design before any screen is styled. */
+/*
+ * Orari's look. Two independent choices are read from attributes on <html>:
+ *   data-style="notebook" | "blocks"     how time and sessions are drawn
+ *   data-theme="light" | "dark"          the resolved colour mode
+ * Every colour is a token below; components use only the token names (bg-surface, text-muted, ...).
+ * Light/dark and notebook/blocks give four token sets. The two styles differ in type, shape and
+ * layout as well as colour: those differences are the `notebook:` and `blocks:` variants.
+ */
+
+@custom-variant notebook (&:where([data-style="notebook"], [data-style="notebook"] *));
+@custom-variant blocks (&:where([data-style="blocks"], [data-style="blocks"] *));
+
+@theme inline {
+    --color-page: var(--page);
+    --color-surface: var(--surface);
+    --color-raised: var(--raised);
+    --color-sunk: var(--sunk);
+    --color-line: var(--line);
+    --color-ink: var(--text);
+    --color-muted: var(--muted);
+    --color-accent: var(--accent);
+    --color-on-accent: var(--on-accent);
+    --color-accent-wash: var(--accent-wash);
+    --color-ok: var(--ok);
+    --color-ok-wash: var(--ok-wash);
+    --color-warn: var(--warn);
+    --color-warn-wash: var(--warn-wash);
+    --color-bad: var(--bad);
+    --color-bad-wash: var(--bad-wash);
+    --font-display: var(--font-display);
+    --font-text: var(--font-text);
+    --font-time: var(--font-time);
+    --radius-s: var(--radius-s);
+    --radius-m: var(--radius-m);
+    --radius-l: var(--radius-l);
+    --shadow-raised: var(--shadow);
+}
+
+/* ---- notebook: a printed planner. Warm paper, ink, one deep green, serif headings, ruled time. ---- */
+:root,
+[data-style="notebook"] {
+    --font-display: "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif;
+    --font-text: "Segoe UI Variable Text", "Segoe UI", system-ui, -apple-system, Roboto, sans-serif;
+    --font-time: var(--font-text);
+    --radius-s: 6px;
+    --radius-m: 10px;
+    --radius-l: 14px;
+    --display-weight: 600;
+    --display-tracking: -0.01em;
+}
+:root,
+[data-style="notebook"][data-theme="light"] {
+    --page: #ece6d9; --surface: #f8f4ea; --raised: #fffdf7; --sunk: #efe9dc;
+    --line: #d9d0bd; --text: #1f1c16; --muted: #6a6253;
+    --accent: #1f5f4a; --on-accent: #fbf8f0; --accent-wash: #dfe9df;
+    --ok: #2d6a3e; --ok-wash: #dcebd9; --warn: #8a5a00; --warn-wash: #f3e6c4; --bad: #a3341f; --bad-wash: #f4dbd3;
+    --t-learn: #2c4f7c; --t-practice: #1f5f4a; --t-recall: #8a5a00; --t-review: #6b3f7a; --t-test: #a3341f;
+    --shadow: 0 1px 0 rgba(31, 28, 22, 0.06), 0 8px 24px rgba(31, 28, 22, 0.07);
+}
+[data-style="notebook"][data-theme="dark"] {
+    --page: #14130f; --surface: #1c1a15; --raised: #24211b; --sunk: #181611;
+    --line: #37322a; --text: #f1ebdd; --muted: #a79d8a;
+    --accent: #7fc4a6; --on-accent: #10221b; --accent-wash: #1d2d26;
+    --ok: #8fcf9a; --ok-wash: #1c2b1f; --warn: #e2b659; --warn-wash: #2e2613; --bad: #ee9279; --bad-wash: #331c16;
+    --t-learn: #9dbde6; --t-practice: #7fc4a6; --t-recall: #e2b659; --t-review: #c9a3d8; --t-test: #ee9279;
+    --shadow: 0 1px 0 rgba(0, 0, 0, 0.3), 0 10px 28px rgba(0, 0, 0, 0.35);
+}
+
+/* ---- blocks: a departures board. Cool and exact, big tabular numerals, one cobalt, tinted blocks. ---- */
+[data-style="blocks"] {
+    --font-display: "Segoe UI Variable Display", "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
+    --font-text: "Segoe UI Variable Text", "Segoe UI", system-ui, -apple-system, Roboto, sans-serif;
+    --font-time: "Cascadia Mono", "SF Mono", Consolas, "Roboto Mono", monospace;
+    --radius-s: 8px;
+    --radius-m: 14px;
+    --radius-l: 20px;
+    --display-weight: 700;
+    --display-tracking: -0.025em;
+}
+[data-style="blocks"][data-theme="light"] {
+    --page: #e9edf3; --surface: #f5f7fa; --raised: #ffffff; --sunk: #edf0f5;
+    --line: #d5dbe5; --text: #121722; --muted: #5a6475;
+    --accent: #2a47c9; --on-accent: #ffffff; --accent-wash: #e2e8fb;
+    --ok: #17703f; --ok-wash: #dcf0e3; --warn: #8a5500; --warn-wash: #fbeccb; --bad: #b3261e; --bad-wash: #fbe0dd;
+    --t-learn: #2a47c9; --t-practice: #0f6b63; --t-recall: #8a5500; --t-review: #7a3aa0; --t-test: #b3261e;
+    --shadow: 0 1px 2px rgba(18, 23, 34, 0.06), 0 12px 28px rgba(18, 23, 34, 0.08);
+}
+[data-style="blocks"][data-theme="dark"] {
+    --page: #0b0e14; --surface: #121620; --raised: #1a1f2c; --sunk: #0f131b;
+    --line: #2a3142; --text: #eef1f7; --muted: #98a2b5;
+    --accent: #8ea4ff; --on-accent: #0c1433; --accent-wash: #1b2445;
+    --ok: #7fd3a0; --ok-wash: #15281d; --warn: #f0c060; --warn-wash: #2c2410; --bad: #ff9a8f; --bad-wash: #341917;
+    --t-learn: #8ea4ff; --t-practice: #6fd0c5; --t-recall: #f0c060; --t-review: #d2a5ee; --t-test: #ff9a8f;
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 14px 32px rgba(0, 0, 0, 0.45);
+}
+
+html {
+    background: var(--page);
+    color: var(--text);
+    font-family: var(--font-text);
+    color-scheme: light;
+}
+html[data-theme="dark"] {
+    color-scheme: dark;
+}
+body {
+    min-height: 100dvh;
+    font-size: 15px;
+    line-height: 1.5;
+    -webkit-text-size-adjust: 100%;
+}
+
+h1, h2, h3 {
+    font-family: var(--font-display);
+    font-weight: var(--display-weight);
+    letter-spacing: var(--display-tracking);
+}
+
+/* One visible focus ring everywhere, in the accent colour. */
+:focus-visible {
+    outline: 3px solid var(--accent);
+    outline-offset: 2px;
+}
+/* The page container is focused by script after a screen change; it is not a control, so it gets no ring. */
+[tabindex="-1"]:focus-visible {
+    outline: none;
+}
+
+/* A session's kind is shown by a shape and a word, never by colour alone. */
+.kind::before {
+    content: "";
+    display: inline-block;
+    width: 9px;
+    height: 9px;
+    margin-right: 6px;
+    background: var(--kind);
+}
+.kind[data-kind="learning"] { --kind: var(--t-learn); }
+.kind[data-kind="learning"]::before { border-radius: 50%; }
+.kind[data-kind="practice"] { --kind: var(--t-practice); }
+.kind[data-kind="practice"]::before { border-radius: 2px; }
+.kind[data-kind="recall"] { --kind: var(--t-recall); }
+.kind[data-kind="recall"]::before { transform: rotate(45deg); border-radius: 1px; }
+.kind[data-kind="revision"] { --kind: var(--t-review); }
+.kind[data-kind="revision"]::before { border-radius: 50% 50% 0 0; }
+.kind[data-kind="assessment"] { --kind: var(--t-test); }
+.kind[data-kind="assessment"]::before { clip-path: polygon(50% 0, 100% 100%, 0 100%); }
+.kind[data-kind="project"] { --kind: var(--t-practice); }
+.kind[data-kind="project"]::before { border-radius: 2px; transform: scale(0.8); }
+
+@media (prefers-reduced-motion: no-preference) {
+    .fade-in { animation: fade-in 160ms ease-out; }
+    @keyframes fade-in { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+}

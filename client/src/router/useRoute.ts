@@ -1,4 +1,4 @@
-import { useSyncExternalStore } from "react";
+import { useMemo, useSyncExternalStore } from "react";
 import { hrefFor, isInternalNavigation, parsePath } from "./routes.ts";
 import type { Route } from "./routes.ts";
 
@@ -23,7 +23,8 @@ export function navigate(route: Exclude<Route, { name: "notFound" }>): void {
 /** The current screen, re-read whenever the address changes. */
 export function useRoute(): Route {
     const pathname = useSyncExternalStore(subscribe, () => window.location.pathname);
-    return parsePath(pathname);
+    // The same object for the same address: effects that depend on the route must not run on every render.
+    return useMemo(() => parsePath(pathname), [pathname]);
 }
 
 /** For onClick on ordinary <a href> links: in-app addresses change the screen without reloading the page. */
