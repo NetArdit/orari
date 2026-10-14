@@ -11,6 +11,7 @@ import {
     dateRange,
     buildFreeWindowsForDate,
     buildCalendar,
+    clipDayFrom,
     totalCapacityMinutes,
     fitsInWindow,
 } from "../lib/time.js";
@@ -213,6 +214,52 @@ describe("calendar", () => {
         const lunch = [{ label: "Drekë", type: "meal", days: null, dates: null, start: "12:00", end: "13:00" }];
         const calendar = buildCalendar("2026-10-14", "2026-10-14", [], lunch, []);
         assert.equal(fitsInWindow("2026-10-14", "11:30", "13:30", calendar), false);
+    });
+});
+
+describe("today from now on (adjusting a plan part-way through the day)", () => {
+    const dayWith = (...ranges) => {
+        const availability = [{ day: "wed", off: false, windows: ranges.map(([start, end]) => ({ start, end })) }];
+        const sleep = [{ label: "Gjumë", type: "sleep", days: null, dates: null, start: "00:00", end: "06:00" }];
+        return buildCalendar("2026-10-14", "2026-10-14", availability, sleep, [])[0];
+    };
+    const clipped = (day, from) => clipDayFrom(day, from).windows.map((w) => `${w.start}-${w.end}`);
+    const day = dayWith(["08:00", "10:00"], ["17:00", "19:00"]);
+
+    test("before every window: nothing changes", () => {
+        assert.deepEqual(clipped(day, "07:00"), ["08:00-10:00", "17:00-19:00"]);
+        assert.deepEqual(clipped(day, "08:00"), ["08:00-10:00", "17:00-19:00"]);
+        assert.deepEqual(clipDayFrom(day, "07:00"), day);
+    });
+
+    test("during a window: only what is left of it, with its minutes recounted", () => {
+        const result = clipDayFrom(day, "08:45");
+        assert.deepEqual(result.windows, [{ start: "08:45", end: "10:00", minutes: 75 }, { start: "17:00", end: "19:00", minutes: 120 }]);
+        assert.equal(result.totalMinutes, 195);
+        assert.deepEqual([result.date, result.weekday], ["2026-10-14", "wed"]);
+    });
+
+    test("what is left of a window must still be worth a session: 20 minutes stay, 19 go", () => {
+        assert.deepEqual(clipped(day, "09:40"), ["09:40-10:00", "17:00-19:00"]);
+        assert.deepEqual(clipped(day, "09:41"), ["17:00-19:00"]);
+    });
+
+    test("between windows, and exactly at the end of one: the earlier window is gone", () => {
+        assert.deepEqual(clipped(day, "10:00"), ["17:00-19:00"]);
+        assert.deepEqual(clipped(day, "13:00"), ["17:00-19:00"]);
+    });
+
+    test("after every window: the day has no free time left", () => {
+        const result = clipDayFrom(day, "19:00");
+        assert.deepEqual([result.windows, result.totalMinutes], [[], 0]);
+        assert.deepEqual(clipDayFrom(day, "23:59").windows, []);
+    });
+
+    test("the day given is not changed, and a time that is not a time changes nothing", () => {
+        const before = structuredClone(day);
+        clipDayFrom(day, "18:00");
+        assert.deepEqual(day, before);
+        assert.deepEqual(clipDayFrom(day, "soon"), day);
     });
 });
 

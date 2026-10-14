@@ -2,7 +2,7 @@
  * Adjusting a plan after falling behind: what is told to the server, and how its answer is joined
  * with what the person has already done.
  */
-import { byTime, minutesOf } from "./clock.ts";
+import { byTime, minutesOf, timeOf } from "./clock.ts";
 import type { Clock } from "./clock.ts";
 import { sessionState } from "./progress.ts";
 import type { AdjustPlanRequest, PlanAnswer } from "../api/types.ts";
@@ -35,7 +35,7 @@ export function buildAdjustRequest(plan: StoredPlan, profile: Pick<StoredProfile
         profile: { name: profile.name, educationLevel: profile.educationLevel },
         // The inputs the plan was made from, sent back as they were stored; the server validates them again.
         structured: plan.structured as AdjustPlanRequest["structured"],
-        progress: { today: clock.today, completedSessionSummaries: completed, missedSessionSummaries: missed, remainingMaterialNote: null },
+        progress: { today: clock.today, now: timeOf(clock.minutes), completedSessionSummaries: completed, missedSessionSummaries: missed, remainingMaterialNote: null },
     };
 }
 

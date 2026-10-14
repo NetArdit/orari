@@ -202,6 +202,9 @@ try {
 
     const sent = await evaluate(`window.__sent.adjust`);
     check("the request tells the server today's date", sent?.progress?.today === TODAY, sent?.progress);
+    const pageNow = await evaluate(`new Date().toTimeString().slice(0, 5)`);
+    const minutes = (t) => Number(t.slice(0, 2)) * 60 + Number(t.slice(3, 5));
+    check("the request tells the server the time of day, so today is planned only from now on", /^([01]\d|2[0-3]):[0-5]\d$/.test(sent?.progress?.now ?? "") && Math.abs(minutes(pageNow) - minutes(sent.progress.now)) <= 2, { sent: sent?.progress?.now, pageNow });
     const expectedDone = [
         `${isoDay(-2)} KEEP past completed (completed)`,
         `${TODAY} KEEP today completed (completed)`,

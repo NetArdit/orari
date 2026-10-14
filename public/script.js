@@ -1058,6 +1058,8 @@ document.getElementById("adjustPlanButton").addEventListener("click", async () =
                 structured: plan.structured,
                 progress: {
                     today,
+                    // Only the rest of today is free: without this, new sessions could be placed in hours already gone.
+                    now: new Date().toTimeString().slice(0, 5),
                     completedSessionSummaries,
                     missedSessionSummaries,
                     remainingMaterialNote: null

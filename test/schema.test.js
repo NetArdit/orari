@@ -237,6 +237,15 @@ describe("AdjustPlanBody", () => {
         body.progress.missedSessionSummaries = Array(51).fill("x");
         assert.equal(ok(AdjustPlanBody, body), false);
     });
+
+    test("progress.now is an optional time of day, tidied like every other time", () => {
+        const withNow = (now) => AdjustPlanBody.safeParse({ ...minimalCreate(), progress: { today: "2026-10-16", now } });
+        assert.equal(withNow(undefined).success, true);
+        assert.equal(withNow("18:30").data.progress.now, "18:30");
+        assert.equal(withNow("9:05").data.progress.now, "09:05");
+        for (const bad of ["24:00", "18.30", "tani", 1830, ""]) assert.equal(withNow(bad).success, false, String(bad));
+        assert.deepEqual(fieldErrors(withNow("tani").error), [{ path: "progress.now", message: "Shkruaje orën në formatin 08:30." }]);
+    });
 });
 
 describe("P0-5: list sizes are bounded", () => {

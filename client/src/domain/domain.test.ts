@@ -219,7 +219,9 @@ describe("adjusting a plan", () => {
         const request = buildAdjustRequest(p, { name: "Arta", educationLevel: "university" }, NOON);
         expect(request.profile).toEqual({ name: "Arta", educationLevel: "university" });
         expect(request.structured).toBe(p.structured);
-        expect(request.progress).toMatchObject({ today: "2026-10-14", completedSessionSummaries: [], remainingMaterialNote: null });
+        expect(request.progress).toMatchObject({ today: "2026-10-14", now: "12:00", completedSessionSummaries: [], remainingMaterialNote: null });
+        expect(buildAdjustRequest(p, { name: "Arta", educationLevel: null }, at("00:05")).progress.now).toBe("00:05");
+        expect(buildAdjustRequest(p, { name: "Arta", educationLevel: null }, at("23:59")).progress.now).toBe("23:59");
     });
 
     test("merge: the past and everything marked is kept, unmarked sessions from today on are replaced", () => {

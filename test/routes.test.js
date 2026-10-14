@@ -823,6 +823,63 @@ describe("POST /api/adjust-plan", () => {
         assert.equal(fake.planCalls.length, 0);
     });
 
+    test("with the person's current time, today is planned only from now on", async () => {
+        fake.plan = async () => ({ ok: true, data: planData([planSession("2026-10-15", "19:00", "20:00")]) });
+        await post(base, "/api/adjust-plan", adjustBody({ now: "18:30" }));
+
+        assert.deepEqual(fake.planCalls[0][0].calendar.map((d) => [d.date, d.windows.map((w) => `${w.start}-${w.end}`)]), [
+            ["2026-10-15", ["18:30-23:00"]],
+            ["2026-10-16", ["07:00-23:00"]],
+        ]);
+    });
+
+    test("a session the AI places earlier today than now is removed and reported; later today and tomorrow morning are kept", async () => {
+        fake.plan = async () => ({
+            ok: true,
+            data: planData([
+                planSession("2026-10-15", "08:00", "09:00"), // this morning, already gone
+                planSession("2026-10-15", "18:00", "19:00"), // started before now
+                planSession("2026-10-15", "18:30", "19:30"), // from now
+                planSession("2026-10-16", "08:00", "09:00"), // tomorrow morning is fine
+            ]),
+        });
+        const { status, json } = await post(base, "/api/adjust-plan", adjustBody({ now: "18:30" }));
+
+        assert.equal(status, 200);
+        assert.deepEqual(json.sessions.map((s) => `${s.date} ${s.startTime}`), ["2026-10-15 18:30", "2026-10-16 08:00"]);
+        assert.deepEqual(json.warnings, ["Kujdes", "2 seanca të propozuara nga AI u hoqën, sepse nuk përshtateshin me kohën që ke të lirë."]);
+    });
+
+    test("current time before, during and after the free window of a one-window day", async () => {
+        const oneWindow = { weeklyAvailability: [{ day: "thu", windows: [{ start: "17:00", end: "19:00" }] }, { day: "fri", windows: [{ start: "17:00", end: "19:00" }] }] };
+        const todaysWindows = async (now) => {
+            fake.planCalls = [];
+            await post(base, "/api/adjust-plan", adjustBody({ now }, oneWindow));
+            return fake.planCalls[0][0].calendar[0].windows.map((w) => `${w.start}-${w.end}`);
+        };
+        assert.deepEqual(await todaysWindows("09:00"), ["17:00-19:00"]);
+        assert.deepEqual(await todaysWindows("17:45"), ["17:45-19:00"]);
+        assert.deepEqual(await todaysWindows("18:41"), []); // 19 minutes left: not worth a session
+        assert.deepEqual(await todaysWindows("21:00"), []);
+    });
+
+    test("if nothing is left of today and today is the last day, there is no free time and the AI is not called", async () => {
+        const { status, json } = await post(base, "/api/adjust-plan", adjustBody({ today: "2026-10-16", now: "23:30" }));
+        assert.deepEqual([status, json.code], [400, "NO_FREE_TIME"]);
+        assert.equal(fake.planCalls.length, 0);
+    });
+
+    test("a client that sends no time gets the whole of today, as before", async () => {
+        await post(base, "/api/adjust-plan", adjustBody());
+        assert.deepEqual(fake.planCalls[0][0].calendar[0].windows.map((w) => `${w.start}-${w.end}`), ["07:00-23:00"]);
+    });
+
+    test("a current time that is not a time is refused and names the field", async () => {
+        const { status, json } = await post(base, "/api/adjust-plan", adjustBody({ now: "tani" }));
+        assert.equal(status, 400);
+        assert.deepEqual(json.fields, [{ path: "progress.now", message: "Shkruaje orën në formatin 08:30." }]);
+    });
+
     test("the last day of a plan can still be adjusted", async () => {
         fake.plan = async () => ({ ok: true, data: planData([planSession("2026-10-16", "08:00", "09:00")]) });
         const { status, json } = await post(base, "/api/adjust-plan", adjustBody({ today: "2026-10-16" }));

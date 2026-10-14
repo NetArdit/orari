@@ -49,6 +49,19 @@ describe("buildCalendarOrError", () => {
         assert.equal(buildCalendarOrError(structured({ startDate: "2026-01-01", endDate: "2026-06-29" })).calendar.length, 180);
     });
 
+    test("with a time as well as a date, the first day starts at that time and the other days are whole", () => {
+        const { calendar } = buildCalendarOrError(structured(), "2026-10-15", "18:30");
+        assert.deepEqual(calendar.map((d) => [d.date, d.windows.map((w) => `${w.start}-${w.end}`), d.totalMinutes]), [
+            ["2026-10-15", ["18:30-23:00"], 270],
+            ["2026-10-16", ["07:00-23:00"], 960],
+        ]);
+    });
+
+    test("a time without a start date is ignored: creating a plan always offers whole days", () => {
+        const { calendar } = buildCalendarOrError(structured(), undefined, "18:30");
+        assert.deepEqual(calendar[0].windows.map((w) => `${w.start}-${w.end}`), ["07:00-23:00"]);
+    });
+
     test("missing unavailableDates is treated as none", () => {
         const input = structured();
         delete input.unavailableDates;

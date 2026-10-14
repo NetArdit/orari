@@ -25,6 +25,11 @@ export function minutesOf(time: string): number {
     return Number(time.slice(0, 2)) * 60 + Number(time.slice(3, 5));
 }
 
+/** 510 to "08:30". */
+export function timeOf(minutes: number): string {
+    return `${pad(Math.floor(minutes / 60))}:${pad(minutes % 60)}`;
+}
+
 export function durationMinutes(session: { startTime: string; endTime: string }): number {
     return Math.max(0, minutesOf(session.endTime) - minutesOf(session.startTime));
 }
