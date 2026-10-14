@@ -145,3 +145,22 @@ export function Empty({ title, children }: { title: string; children?: ReactNode
         </section>
     );
 }
+
+/** After a refusal that sign-in or e-mail confirmation would fix: the way there, not just the message. */
+export function AccountRecovery({ kind }: { kind: string }) {
+    if (kind === "unauthenticated" || kind === "invalid_credentials") {
+        return (
+            <p className="text-sm">
+                <Link to={{ name: "signIn" }} className="font-semibold underline underline-offset-2">Hyr në llogari</Link>
+            </p>
+        );
+    }
+    if (kind === "unverified") {
+        return (
+            <p className="text-sm">
+                <Link to={{ name: "me" }} className="font-semibold underline underline-offset-2">Hap cilësimet për të konfirmuar email-in</Link>
+            </p>
+        );
+    }
+    return null;
+}

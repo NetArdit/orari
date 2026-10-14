@@ -147,6 +147,10 @@ await browser.run(async () => {
     check("a reload keeps the person signed in", true);
     check("the device list shows this device", (await text('section[aria-label="Llogaria"]')).includes("(kjo)"));
 
+    await press("Dërgo planet e kësaj pajisjeje");
+    await waitFor(`document.querySelector('[data-testid="sync"] [role=status]')?.textContent.startsWith("U dërguan")`, "the sync answer");
+    check("sync: sending plans answers in words, and says the demo account is forgotten on restart", (await text('[data-testid="sync"]')).includes("harrohet kur ndalet serveri"));
+
     await press("Dil");
     await waitFor(`document.querySelector('section[aria-label="Llogaria"]')?.textContent.includes("Regjistrohu")`, "the signed-out panel");
     await goto(BASE + "/app/une");

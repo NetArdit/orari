@@ -6,7 +6,7 @@ import type { CommitmentDraft, CommitmentKind, Difficulty, Energy, PlanFormState
 import { navigate } from "../router/useRoute.ts";
 import { useFlow, useServices, useStoreState } from "../app/services.tsx";
 import { Field, INPUT } from "../ui/forms.tsx";
-import { Button, buttonClass, Link, Notice, ScreenTitle } from "../ui/primitives.tsx";
+import { AccountRecovery, Button, buttonClass, Link, Notice, ScreenTitle } from "../ui/primitives.tsx";
 import type { FieldError } from "../api/types.ts";
 
 const WEEKDAY_NAMES: Record<Weekday, string> = { mon: "E hënë", tue: "E martë", wed: "E mërkurë", thu: "E enjte", fri: "E premte", sat: "E shtunë", sun: "E diel" };
@@ -83,6 +83,7 @@ export function NewPlanScreen() {
 
                 {failure && (
                     <Notice look="bad" role="alert" title={failure.message}>
+                        <AccountRecovery kind={failure.kind} />
                         {failure.kind !== "invalid" && "retryAfterSeconds" in failure && failure.retryAfterSeconds ? <p className="text-sm">Provo përsëri pas {failure.retryAfterSeconds} sekondash.</p> : null}
                     </Notice>
                 )}
@@ -136,6 +137,7 @@ export function NewPlanScreen() {
 
             {createState.status === "failed" && fieldErrors.length === 0 && (
                 <Notice look="bad" role="alert" title={createState.failure.message}>
+                    <AccountRecovery kind={createState.failure.kind} />
                     {"retryAfterSeconds" in createState.failure && createState.failure.retryAfterSeconds ? <p className="text-sm">Provo përsëri pas {createState.failure.retryAfterSeconds} sekondash.</p> : null}
                 </Notice>
             )}

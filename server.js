@@ -6,6 +6,7 @@ import { createMemoryAccountsRepository } from "./lib/accounts/memoryRepository.
 import { createPasswordHasher } from "./lib/accounts/password.js";
 import { createPwnedCheck } from "./lib/accounts/pwned.js";
 import { createAccountService } from "./lib/accounts/service.js";
+import { checkMemoryAccountsEnvironment } from "./lib/accounts/localOnly.js";
 import { createTestMail } from "./lib/accounts/testMail.js";
 
 dotenv.config();
@@ -39,7 +40,14 @@ const { parseNaturalLanguageRequest, generateStudyPlan } = createAi({ models });
 /* Accounts exist only when asked for, and only in memory for now: no database, no mail provider and
    no host have been chosen. Everything is lost when the process stops, and the page says so. */
 let accounts = null;
+let HOST = process.env.HOST || undefined;
 if (process.env.ACCOUNTS_MODE === "memory") {
+    const environment = checkMemoryAccountsEnvironment(process.env);
+    if (!environment.ok) {
+        console.error("ERROR:", environment.reason);
+        process.exit(1);
+    }
+    HOST = environment.host;
     const baseUrl = (process.env.ORARI_BASE_URL || `http://localhost:${PORT}`).replace(/\/$/, "");
     const service = createAccountService({
         repo: createMemoryAccountsRepository(),
@@ -70,7 +78,7 @@ const app = createApp({
    START SERVER
 ========================================= */
 
-const server = app.listen(PORT, () => {
+const server = app.listen(PORT, ...(HOST ? [HOST] : []), () => {
     console.log(`StudyFlow running at http://localhost:${PORT}`);
     if (!AI_CONFIGURED) {
         console.log("-> AI features are disabled until OPENROUTER_API_KEY is set in .env");

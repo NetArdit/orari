@@ -239,6 +239,12 @@ export function createApiClient({ baseUrl = "", fetch: fetchFn = globalThis.fetc
             revokeOtherSessions: (options: RequestOptions = {}) => request<{ ok: true; removed: number }>("POST", "/api/account/sessions/revoke-others", {}, timeoutMs, options),
             deleteAccount: (password: string, options: RequestOptions = {}) => request<{ ok: true }>("POST", "/api/account/delete", { password }, timeoutMs, options),
         },
+
+        /** Plan sync; needs a session and a confirmed e-mail address. */
+        sync: {
+            listPlans: (options: RequestOptions = {}) => request<{ plans: Array<{ id: string } & Record<string, unknown>> }>("GET", "/api/sync/plans", undefined, timeoutMs, options),
+            createPlan: (plan: unknown, options: RequestOptions = {}) => request<{ plan: unknown }>("POST", "/api/sync/plans", { plan }, timeoutMs, options),
+        },
     };
 }
 

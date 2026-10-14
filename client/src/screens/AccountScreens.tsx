@@ -6,6 +6,7 @@ import { navigate } from "../router/useRoute.ts";
 import { Field, INPUT } from "../ui/forms.tsx";
 import { Button, buttonClass, Link, Notice, ScreenTitle } from "../ui/primitives.tsx";
 import { shortDate } from "../ui/text.ts";
+import { downloadPlans, uploadPlans } from "../state/accountSync.ts";
 
 /** The server's own message for a failure, or ours if it sent none. */
 const messageOf = (failure: ApiFailure) => failure.message;
@@ -405,6 +406,24 @@ export function AccountPanel() {
     const [sessions, setSessions] = useState<AccountSession[] | null>(null);
     const [resent, setResent] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [syncing, setSyncing] = useState(false);
+    const [syncNote, setSyncNote] = useState<string | null>(null);
+    const { store } = useServices();
+
+    async function runSync(direction: "up" | "down") {
+        setSyncing(true);
+        setSyncNote(null);
+        const current = store.getState();
+        const local = current.status === "ready" ? current.plans : [];
+        if (direction === "up") {
+            const outcome = await uploadPlans(api, local);
+            setSyncNote(outcome.ok ? `U dërguan ${outcome.report.sent} plane. Ishin tashmë në llogari: ${outcome.report.alreadyThere}.${outcome.report.failed ? ` Nuk u dërguan: ${outcome.report.failed}.` : ""}` : outcome.message);
+        } else {
+            const outcome = await downloadPlans(api, new Set(local.map((p) => p.id)), (plan) => store.addPlan(plan));
+            setSyncNote(outcome.ok ? `U shtuan ${outcome.report.added} plane në këtë pajisje. Ishin tashmë këtu: ${outcome.report.alreadyHere}.${outcome.report.unreadable ? ` Nuk u lexuan: ${outcome.report.unreadable}.` : ""}` : outcome.message);
+        }
+        setSyncing(false);
+    }
 
     useEffect(() => {
         if (state.status !== "signedIn") return setSessions(null);
@@ -451,6 +470,18 @@ export function AccountPanel() {
                         </Notice>
                     )}
                     {error && <p role="alert" className="text-sm font-semibold text-bad">{error}</p>}
+
+                    {state.user.emailVerified && (
+                        <div className="flex flex-col gap-2" data-testid="sync">
+                            <h3 className="text-base font-semibold">Planet mes pajisjeve</h3>
+                            <p className="text-[13px] text-muted">Vetëm kur e kërkon ti. Asnjë plan nuk fshihet apo mbishkruhet. Në këtë version demonstrues llogaria harrohet kur ndalet serveri, ndaj kopja e vërtetë mbetet në këtë pajisje.</p>
+                            <div className="flex flex-wrap gap-2">
+                                <Button disabled={syncing} onClick={() => void runSync("up")}>Dërgo planet e kësaj pajisjeje</Button>
+                                <Button disabled={syncing} onClick={() => void runSync("down")}>Merr planet nga llogaria</Button>
+                            </div>
+                            {syncNote && <p role="status" className="text-sm font-semibold">{syncNote}</p>}
+                        </div>
+                    )}
 
                     {sessions && (
                         <div className="flex flex-col gap-2">

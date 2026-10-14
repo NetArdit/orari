@@ -3,7 +3,7 @@ import { createReplanFlow } from "../state/flows.ts";
 import { durationMinutes } from "../domain/clock.ts";
 import { currentPlan, needsReplan, nextSession, progressOf, streakDays, todayAgenda } from "../domain/progress.ts";
 import { useClock, useFlow, useServices, useStoreState } from "../app/services.tsx";
-import { Button, buttonClass, Empty, Link, Notice, ScreenTitle, SessionRow } from "../ui/primitives.tsx";
+import { AccountRecovery, Button, buttonClass, Empty, Link, Notice, ScreenTitle, SessionRow } from "../ui/primitives.tsx";
 import { dayLabel, minutesLabel } from "../ui/text.ts";
 import type { SessionStatus } from "../storage/model.ts";
 
@@ -81,6 +81,7 @@ export function TodayScreen() {
                     {replanState.status === "failed" && (
                         <div role="alert" className="flex flex-col gap-2">
                             <p className="text-sm">{replanState.failure.message}</p>
+                            <AccountRecovery kind={replanState.failure.kind} />
                             <div className="flex flex-wrap gap-2">
                                 <Button look="primary" onClick={() => { replan.reset(); replan.start({ planId: behind.id, profile: profile ?? { name: "Nxënës", educationLevel: null } }); }}>
                                     Provo prapë
