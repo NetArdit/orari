@@ -120,6 +120,7 @@ await browser.run(async () => {
     check("Settings: choosing blocks and dark changes the page at once", (await evaluate(`[document.documentElement.dataset.style, document.documentElement.dataset.theme].join()`)) === "blocks,dark");
     await goto(BASE + "/app/une");
     check("Settings: the choice is in place before the app has loaded, with no flash (the attributes are set by the first script)", (await evaluate(`[document.documentElement.dataset.style, document.documentElement.dataset.theme].join()`)) === "blocks,dark");
+    await ready();
     check("Settings: the device list still shows what the old page left", (await evaluate(`document.querySelector('[data-testid="profile"]')?.textContent`)) === "Profili: Arta" && (await evaluate(`document.querySelector('[data-testid="plans"]')?.textContent`)) === "Plane në këtë pajisje: 1");
 
     /* ---------- the four looks, phone and desktop ---------- */

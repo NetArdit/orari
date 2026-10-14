@@ -70,7 +70,7 @@ export function StatePill({ state }: { state: SessionState }) {
 }
 
 /** The three ways to mark a session. Pressing the one already chosen clears it. */
-export function Marks({ status, onMark, label }: { status: SessionStatus; onMark: (next: SessionStatus) => void; label: string }) {
+export function Marks({ status, onMark, label, tight = false }: { status: SessionStatus; onMark: (next: SessionStatus) => void; label: string; tight?: boolean }) {
     return (
         <div role="group" aria-label={label} className="flex flex-wrap gap-1.5">
             {MARKS.map((mark) => (
@@ -79,7 +79,7 @@ export function Marks({ status, onMark, label }: { status: SessionStatus; onMark
                     type="button"
                     aria-pressed={status === mark.status}
                     onClick={() => onMark(status === mark.status ? "pending" : mark.status)}
-                    className="min-h-11 rounded-full border border-line px-3.5 text-[13px] font-semibold transition-colors aria-pressed:border-transparent aria-pressed:bg-ok-wash aria-pressed:text-ok hover:bg-sunk"
+                    className={`min-h-11 rounded-full border border-line px-3.5 text-[13px] font-semibold transition-colors aria-pressed:border-transparent aria-pressed:bg-ok-wash aria-pressed:text-ok hover:bg-sunk ${tight ? "blocks:xl:min-h-9 blocks:xl:px-2.5 blocks:xl:text-xs" : ""}`}
                 >
                     {mark.label}
                 </button>
@@ -120,10 +120,8 @@ export function SessionRow({ item, onMark, showDate, linkTo, compact = false }: 
                 <p className="text-[13px] text-muted">
                     {subject} · <TimeRange session={session} />
                 </p>
-                {/* In the week grid of the blocks style the columns are narrow: marking is done on Today and on the session. */}
-                <div className={compact ? "blocks:xl:hidden" : ""}>
-                    <Marks status={session.status} onMark={onMark} label={`Si shkoi: ${session.title}`} />
-                </div>
+                {/* In the wide week grid of the blocks style the columns are narrow: the marks stay, in a tighter size. */}
+                <Marks status={session.status} onMark={onMark} label={`Si shkoi: ${session.title}`} tight={compact} />
             </div>
         </li>
     );
