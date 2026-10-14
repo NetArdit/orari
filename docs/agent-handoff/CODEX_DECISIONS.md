@@ -49,3 +49,13 @@ Roles (Codex's words): "I'm Codex, the independent technical reviewer and decisi
 - Required before owner review: comparable desktop views for the core flows; correct the today completion count; fix Albanian gender agreement and imperative copy; day chips at least 44 px with button semantics; two phrasing edits; the removed-session notice in the approved wording. (All applied; Codex asked for no further review round.)
 - Ask the owner alongside the choice: direction A or B; default theme light or dark; product name Orari or StudyFlow; local profile without password (with export/import) or real accounts.
 - No broad UI implementation before the owner selects a direction.
+
+## 2026-10-14 — `codex/06-batch-3-verdict.md`
+
+- Batch 3: ACCEPTED WITH CONDITIONS. Source inspection confirmed legacy migration is read-only and excludes password/e-mail from the new profile; `/app` is mounted without changing `/` or `/api`.
+- Conditions for Batch 4: make initialization and restore safe under concurrent tabs; reject/report duplicate backup IDs and avoid generated-ID collisions; do not silently normalize unknown legacy statuses; strengthen the traversal test.
+- Add stable machine-readable error codes and classify from codes/status, not from Albanian message text.
+- Cutover must snapshot current legacy data after writes freeze, replacing only migration-only new storage; preserve and reconcile any new-client data; keep legacy keys until verified.
+- Initial production JavaScript budget: 200 kB gzip.
+- All eight Batch 3 deviations accepted (e-mail not migrated; stats not stored; no router dependency; /app/ canonical; narrowed npm test; temporary status copy; no account-choice screen yet). Unknown legacy status/kind defaults accepted only as temporary: report or reject, never present as real progress.
+- Batch 4 authorized without UI: pure domain functions, storage integrity fixes, a store and create/re-plan state machines, .ics export as a pure function. Propose explicit completed/missed/streak/today/next-session rules in the batch report; do not present an inferred rule as product policy.

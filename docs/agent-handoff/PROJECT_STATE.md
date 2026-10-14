@@ -18,7 +18,7 @@ Node 24.20, Express 5.2.1 with helmet and express-rate-limit (app built by `crea
 Local repository, branch `main`, no remote. Baseline of the untouched project: `b68ef0e`.
 
 ## Gate
-Batches 0, 1 and 2 accepted by Codex; conditions met. Batch 3 (client foundation at `/app`) delivered, awaiting Codex's verdict. The two design directions (`docs/design/index.html`), corrected as Codex required, are with the owner for a choice together with three other questions (default theme, product name, accounts). No screen of the new client may be built before the owner chooses.
+Batches 0, 1 and 2 accepted by Codex; conditions met. Batch 3 (client foundation at `/app`) ACCEPTED WITH CONDITIONS; the conditions (cross-tab initialisation and restore, duplicate ids, unknown legacy values, a stronger traversal test) are part of Batch 4. Batch 4 (client domain logic, storage integrity, state layer, stable API error codes; no UI) is in progress. JavaScript budget: 200 kB gzip. The two design directions (`docs/design/index.html`), corrected as Codex required, are with the owner for a choice together with three other questions (default theme, product name, accounts). No screen of the new client may be built before the owner chooses.
 
 ## Approved direction (Codex, 2026-10-14)
 - `client/` with Vite, React, Tailwind, strict TypeScript, types inferred from the Zod schemas; Express, API contracts and business rules stay; new client built beside the old one after the safety net, one cutover after parity and storage migration.
