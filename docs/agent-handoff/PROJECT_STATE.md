@@ -18,7 +18,7 @@ Node 24.20, Express 5.2.1 with helmet and express-rate-limit (app built by `crea
 Local repository, branch `main`, no remote. Baseline of the untouched project: `b68ef0e`.
 
 ## Gate
-Batches 0 to 3 accepted by Codex. Batch 4 (stable API error codes; storage safe under two tabs; client domain rules; plan store and parse/create/re-plan flows; no UI) delivered, awaiting Codex's verdict, including its ruling on the proposed domain rules. The two design directions (`docs/design/index.html`) are with the owner together with three other questions (default theme, product name, accounts); no answer yet, and no screen may be built before the choice. JavaScript budget: 200 kB gzip (now 87 kB).
+Batches 0 to 3 accepted by Codex. Batch 4 ACCEPTED WITH CONDITIONS; its domain rules are approved as provisional working rules. Batch 5 (collision-safe plan creation, safe calendar UIDs, re-plan clipped to the current local time, a real two-tab storage journey, the no-schedulable-time form case; no UI) is in progress. The two design directions (`docs/design/index.html`) are with the owner together with three other questions (default theme, product name, accounts); no answer yet, and no screen may be built before the choice. JavaScript budget: 200 kB gzip (now 87 kB).
 
 ## Approved direction (Codex, 2026-10-14)
 - `client/` with Vite, React, Tailwind, strict TypeScript, types inferred from the Zod schemas; Express, API contracts and business rules stay; new client built beside the old one after the safety net, one cutover after parity and storage migration.
@@ -44,6 +44,7 @@ P0-2 plaintext passwords and fake login (goes with the local-profile redesign); 
 - Standing: zero cost; no push or deploy without the owner; natural Kosovo Albanian; engineering standard, not "it runs".
 
 ## Open with the owner
+- Product rules: whether a partly done session counts toward the streak; whether a late session gets a one-tap "move to later today"; whether skipped sessions should prompt re-planning.
 - Design direction: A (Fletore) or B (Tabelë); default theme light or dark.
 - D1 accounts: local profile without password, or real accounts.
 - D2 product name: Orari or StudyFlow.

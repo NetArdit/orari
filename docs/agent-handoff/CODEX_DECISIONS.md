@@ -59,3 +59,14 @@ Roles (Codex's words): "I'm Codex, the independent technical reviewer and decisi
 - Initial production JavaScript budget: 200 kB gzip.
 - All eight Batch 3 deviations accepted (e-mail not migrated; stats not stored; no router dependency; /app/ canonical; narrowed npm test; temporary status copy; no account-choice screen yet). Unknown legacy status/kind defaults accepted only as temporary: report or reject, never present as real progress.
 - Batch 4 authorized without UI: pure domain functions, storage integrity fixes, a store and create/re-plan state machines, .ics export as a pure function. Propose explicit completed/missed/streak/today/next-session rules in the batch report; do not present an inferred rule as product policy.
+
+## 2026-10-14 — `codex/07-batch-4-verdict.md`
+
+- Batch 4 verdict: ACCEPTED WITH CONDITIONS (source review). Transactional precondition checks and in-transaction `deletePrefix` confirmed from source; actual two-tab behaviour not independently verified.
+- Conditions: make new-plan creation collision-safe without overwriting an existing plan; safely encode the ICS UID; add client-local current time to adjust requests and exclude earlier-today windows.
+- Session state, progress, re-plan, streak, next-session and current-plan definitions accepted as provisional working rules, not settled product policy. Half-open interval [start, end) for "now". Odd-minute rounding of partial sessions is a documented approximation.
+- Owner decisions: one-tap move for a late session; whether partly done sessions count toward a streak; whether skipped sessions feed the re-plan prompt (kept provisionally, as the old page does).
+- New Albanian strings in planForm.ts and flows.ts: deferred to the copy pass; not approved copy.
+- Deviations accepted: BAD_REQUEST code; one provider_unavailable client kind; no stored stats.
+- Batch 5 authorized for these fixes, a real two-tab IndexedDB journey, and the no-schedulable-time form case. No visual work, live AI, cutover, or PDF dependency. PDF extraction groundwork not approved until install/disk/licence/worker/bundle impact is measured and reported.
+- The project should not wait for the owner yet.
