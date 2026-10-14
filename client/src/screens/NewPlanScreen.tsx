@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { createParseFlow, createPlanFlow } from "../state/flows.ts";
 import { clockFrom } from "../domain/clock.ts";
-import { emptyPlanForm, errorsAt, LIMITS, WEEKDAYS } from "../domain/planForm.ts";
+import { applyPlanDefaults, buildPlanInputs, emptyPlanForm, errorsAt, LIMITS, WEEKDAYS } from "../domain/planForm.ts";
 import type { CommitmentDraft, CommitmentKind, Difficulty, Energy, PlanFormState, PlanMode, Weekday } from "../domain/planForm.ts";
 import { navigate } from "../router/useRoute.ts";
 import { useFlow, useServices, useStoreState } from "../app/services.tsx";
@@ -50,13 +50,19 @@ export function NewPlanScreen() {
             return next;
         });
 
-    // What the AI read becomes the form, once.
+    const profile = state.status === "ready" && state.profile ? state.profile : { name: "Nxënës", educationLevel: null };
+
+    // What the AI read becomes the form, once, with what the person left out filled in. When that is enough for a
+    // plan, the plan is made at once: a short description is all it takes. Otherwise the form is shown to be completed.
     useEffect(() => {
         if (parseState.status !== "done") return;
-        setForm(parseState.result.form);
-        setQuestions(parseState.result.questions);
+        const completed = applyPlanDefaults(parseState.result.form, today);
+        setForm(completed);
+        setQuestions([]);
         setStep("check");
         parse.reset();
+        if (buildPlanInputs(completed).ok) create.start({ form: completed, profile });
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [parseState, parse]);
 
     // A created plan: go to it.
@@ -66,7 +72,6 @@ export function NewPlanScreen() {
 
     const fieldErrors: FieldError[] = createState.status === "failed" && "fields" in createState.failure && createState.failure.fields ? createState.failure.fields : [];
     const at = (path: string) => errorsAt(fieldErrors, path);
-    const profile = state.status === "ready" && state.profile ? state.profile : { name: "Nxënës", educationLevel: null };
     const creating = createState.status === "working";
 
     if (step === "describe") {

@@ -154,6 +154,27 @@ export function studyDatesIn(form: Pick<PlanFormState, "startDate" | "endDate" |
     return count;
 }
 
+/** How long a plan runs when the person gave no end: long enough to be a real plan, short enough to hold. */
+export const DEFAULT_PLAN_DAYS = 28;
+
+/**
+ * What the person did not say, filled in with reasonable choices, so that a short description is enough to get a
+ * plan: the plan starts today, runs four weeks when no end was given, and a day named as free without hours gets an
+ * evening window as long as the session (two hours when no length was given). Nothing the person did say is changed.
+ */
+export function applyPlanDefaults(form: PlanFormState, today: string): PlanFormState {
+    const startDate = isRealDate(form.startDate) ? form.startDate : today;
+    const endDate = isRealDate(form.endDate) ? form.endDate : addDays(startDate, DEFAULT_PLAN_DAYS - 1);
+    const minutes = form.sessionMinutes ?? 120;
+    const endMinutes = Math.min(17 * 60 + Math.max(minutes, 60), 23 * 60);
+    const windowEnd = `${String(Math.floor(endMinutes / 60)).padStart(2, "0")}:${String(endMinutes % 60).padStart(2, "0")}`;
+    const days = structuredClone(form.days);
+    for (const day of WEEKDAYS) {
+        if (days[day].mode === "free" && days[day].windows.length === 0) days[day] = { mode: "free", windows: [{ start: "17:00", end: windowEnd }] };
+    }
+    return { ...form, startDate, endDate, days };
+}
+
 /**
  * Checks the form and, if everything holds, gives the plan inputs to send.
  * Every problem is reported at once, each with the path of its control.
