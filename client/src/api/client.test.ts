@@ -78,40 +78,67 @@ describe("failures are sorted into kinds the screens can act on", () => {
         return result;
     };
 
-    test("validation: the server's message and its fields are passed on", async () => {
+    test("validation: the server's code, message and fields are passed on", async () => {
         const fields = [{ path: "structured.endDate", message: "Data nuk është e vlefshme." }];
-        const result = await failing(json(400, { error: "Datat e planit nuk janë valide.", fields }));
-        expect(result).toEqual({ ok: false, kind: "validation", status: 400, message: "Datat e planit nuk janë valide.", fields });
+        const result = await failing(json(400, { code: "VALIDATION", error: "Datat e planit nuk janë valide.", fields }));
+        expect(result).toEqual({ ok: false, kind: "validation", status: 400, code: "VALIDATION", message: "Datat e planit nuk janë valide.", fields });
     });
 
     test("validation without fields (a date rule) has no fields property", async () => {
-        const result = await failing(json(400, { error: "Data e fillimit duhet të jetë para datës së mbarimit." }));
-        expect(result.kind).toBe("validation");
+        const result = await failing(json(400, { code: "DATES_REVERSED", error: "Data e fillimit duhet të jetë para datës së mbarimit." }));
+        expect([result.kind, result.code]).toEqual(["validation", "DATES_REVERSED"]);
         expect("fields" in result).toBe(false);
     });
 
     test("malformed fields from the server are ignored, not trusted", async () => {
-        const result = await failing(json(400, { error: "x", fields: [{ path: 5 }] }));
+        const result = await failing(json(400, { code: "VALIDATION", error: "x", fields: [{ path: 5 }] }));
         expect("fields" in result).toBe(false);
     });
 
+    test("every code the server publishes has a kind", async () => {
+        const { ERROR_CODES } = await import("../../../lib/schema.js");
+        const expected: Record<string, string> = {
+            VALIDATION: "validation", BAD_JSON: "validation", BAD_REQUEST: "validation", BODY_TOO_LARGE: "validation", INVALID_DATES: "validation",
+            DATES_REVERSED: "validation", PERIOD_TOO_LONG: "validation", NO_FREE_TIME: "validation", PLAN_FINISHED: "validation",
+            RATE_LIMITED: "rate_limited", SERVER_BUSY: "busy", AI_NOT_CONFIGURED: "not_configured",
+            PROVIDER_RATE_LIMITED: "provider_unavailable", PROVIDER_UNAVAILABLE: "provider_unavailable", AI_TIMEOUT: "timeout",
+            AI_REJECTED_REQUEST: "ai_failed", AI_UNUSABLE_ANSWER: "ai_failed", AI_NO_USABLE_SESSIONS: "ai_failed", AI_FAILED: "ai_failed",
+            NOT_FOUND: "server", INTERNAL: "server",
+        };
+        expect([...ERROR_CODES].sort()).toEqual(Object.keys(expected).sort());
+        for (const code of ERROR_CODES) {
+            // The status is deliberately misleading: the code decides.
+            const result = await failing(json(500, { code, error: "Teksti mund të ndryshojë." }));
+            expect([code, result.kind, result.code]).toEqual([code, expected[code], code]);
+        }
+    });
+
+    test("the three 503s are told apart by code even when the wording changes", async () => {
+        const reworded = "Një fjali krejt tjetër.";
+        expect((await failing(json(503, { code: "AI_NOT_CONFIGURED", error: reworded }))).kind).toBe("not_configured");
+        const busy = await failing(json(503, { code: "SERVER_BUSY", error: reworded }, { "Retry-After": "15" }));
+        expect([busy.kind, busy.retryAfterSeconds, busy.message]).toEqual(["busy", 15, reworded]);
+        expect((await failing(json(503, { code: "PROVIDER_RATE_LIMITED", error: reworded }))).kind).toBe("provider_unavailable");
+    });
+
     test("rate limited, with the server's retry time", async () => {
-        const result = await failing(json(429, { error: "Ke bërë shumë kërkesa njëra pas tjetrës. Prit pak minuta dhe provo përsëri." }, { "Retry-After": "412" }));
-        expect(result.kind).toBe("rate_limited");
-        expect(result.retryAfterSeconds).toBe(412);
+        const result = await failing(json(429, { code: "RATE_LIMITED", error: "Ke bërë shumë kërkesa." }, { "Retry-After": "412" }));
+        expect([result.kind, result.retryAfterSeconds]).toEqual(["rate_limited", 412]);
     });
 
-    test("the three meanings of 503 are told apart by the server's message", async () => {
-        expect((await failing(json(503, { error: "AI nuk është konfiguruar ende." }))).kind).toBe("not_configured");
-        const busy = await failing(json(503, { error: "Shërbimi është i zënë për momentin. Provo përsëri pas pak." }, { "Retry-After": "15" }));
-        expect([busy.kind, busy.retryAfterSeconds]).toEqual(["busy", 15]);
-        expect((await failing(json(503, { error: "Shërbimi AI ka arritur kufirin e përdorimit. Provo më vonë." }))).kind).toBe("rate_limited");
-    });
+    test("without a code, only the status is used, and an unknown code is not trusted", async () => {
+        expect((await failing(json(400, { error: "x" }))).kind).toBe("validation");
+        expect((await failing(json(429, {}))).kind).toBe("rate_limited");
+        expect((await failing(json(504, {}))).kind).toBe("timeout");
+        // A 502 or 503 without our code is a proxy or an outage in front of the server, not an AI result.
+        expect((await failing(json(502, {}))).kind).toBe("server");
+        expect((await failing(json(503, { error: "AI nuk është konfiguruar ende." }))).kind).toBe("server");
 
-    test("the server's AI deadline is a timeout; an unusable AI answer is ai_failed", async () => {
-        expect((await failing(json(504, { error: "AI po vonon më shumë se zakonisht. Provo përsëri pas pak." }))).kind).toBe("timeout");
-        const failed = await failing(json(502, { error: "AI gjeneroi një plan të paplotë. Provo përsëri." }));
-        expect([failed.kind, failed.message]).toEqual(["ai_failed", "AI gjeneroi një plan të paplotë. Provo përsëri."]);
+        const unknown = await failing(json(503, { code: "SOMETHING_NEW", error: "x" }));
+        expect(unknown.kind).toBe("server");
+        expect("code" in unknown).toBe(false);
+        const inherited = await failing(json(500, { code: "toString", error: "x" }));
+        expect("code" in inherited).toBe(false);
     });
 
     test("an unexpected status is a server failure with a message of our own", async () => {
@@ -121,7 +148,7 @@ describe("failures are sorted into kinds the screens can act on", () => {
 
     test("an answer that is not JSON never throws", async () => {
         const html = await failing(new Response("<html>Bad gateway</html>", { status: 502 }));
-        expect([html.kind, html.status]).toEqual(["ai_failed", 502]);
+        expect([html.kind, html.status]).toEqual(["server", 502]);
         const okButNotJson = await failing(new Response("ok", { status: 200 }));
         expect(okButNotJson.kind).toBe("server");
     });

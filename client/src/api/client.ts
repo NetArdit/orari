@@ -1,6 +1,7 @@
 import type {
     AdjustPlanRequest,
     CreatePlanRequest,
+    ErrorCode,
     FieldError,
     HealthAnswer,
     ParsedDescription,
@@ -12,6 +13,7 @@ import type {
  * Why a request did not succeed, in terms the screens can act on:
  *  - validation: the server refused the input; `fields` says where.
  *  - rate_limited / busy: come back later; `retryAfterSeconds` when the server said when.
+ *  - provider_unavailable: the AI service behind the server is at its limit or out of reach.
  *  - timeout: we stopped waiting, or the server's own AI deadline passed.
  *  - aborted: the caller cancelled (the person pressed "Ndale" or left the screen). Not an error to show.
  *  - not_configured: the server has no AI key.
@@ -23,6 +25,7 @@ export type ApiFailureKind =
     | "validation"
     | "rate_limited"
     | "busy"
+    | "provider_unavailable"
     | "timeout"
     | "aborted"
     | "not_configured"
@@ -35,6 +38,8 @@ export interface ApiFailure {
     kind: ApiFailureKind;
     /** Albanian, safe to show. From the server when it sent one. */
     message: string;
+    /** The server's own name for what happened, when it sent one. */
+    code?: ErrorCode;
     status?: number;
     fields?: FieldError[];
     retryAfterSeconds?: number;
@@ -60,6 +65,7 @@ const FALLBACK: Record<ApiFailureKind, string> = {
     validation: "Disa të dhëna nuk janë në rregull.",
     rate_limited: "Ke bërë shumë kërkesa njëra pas tjetrës. Prit pak minuta dhe provo përsëri.",
     busy: "Shërbimi është i zënë për momentin. Provo përsëri pas pak.",
+    provider_unavailable: "Shërbimi AI nuk është i disponueshëm për momentin. Provo më vonë.",
     timeout: "AI po vonon më shumë se zakonisht. Provo përsëri pas pak.",
     aborted: "Kërkesa u ndal.",
     not_configured: "AI nuk është konfiguruar ende.",
@@ -68,17 +74,38 @@ const FALLBACK: Record<ApiFailureKind, string> = {
     server: "Ndodhi një gabim i papritur. Provo përsëri.",
 };
 
-/** The server uses 503 for three different situations; its message tells them apart. */
-function kindForStatus(status: number, message: string): ApiFailureKind {
+/** Every code the server can send, and what the screens should do about it. A new server code will not compile until it is placed here. */
+const KIND_FOR_CODE: Record<ErrorCode, ApiFailureKind> = {
+    VALIDATION: "validation",
+    BAD_JSON: "validation",
+    BAD_REQUEST: "validation",
+    BODY_TOO_LARGE: "validation",
+    INVALID_DATES: "validation",
+    DATES_REVERSED: "validation",
+    PERIOD_TOO_LONG: "validation",
+    NO_FREE_TIME: "validation",
+    PLAN_FINISHED: "validation",
+    RATE_LIMITED: "rate_limited",
+    SERVER_BUSY: "busy",
+    AI_NOT_CONFIGURED: "not_configured",
+    PROVIDER_RATE_LIMITED: "provider_unavailable",
+    PROVIDER_UNAVAILABLE: "provider_unavailable",
+    AI_TIMEOUT: "timeout",
+    AI_REJECTED_REQUEST: "ai_failed",
+    AI_UNUSABLE_ANSWER: "ai_failed",
+    AI_NO_USABLE_SESSIONS: "ai_failed",
+    AI_FAILED: "ai_failed",
+    NOT_FOUND: "server",
+    INTERNAL: "server",
+};
+
+const isErrorCode = (value: unknown): value is ErrorCode => typeof value === "string" && Object.hasOwn(KIND_FOR_CODE, value);
+
+/** Without a code (a proxy's own error page, an older server) only the status is left to go by. */
+function kindForStatus(status: number): ApiFailureKind {
     if (status === 400 || status === 413) return "validation";
     if (status === 429) return "rate_limited";
     if (status === 504) return "timeout";
-    if (status === 502) return "ai_failed";
-    if (status === 503) {
-        if (message === FALLBACK.not_configured) return "not_configured";
-        if (message === FALLBACK.busy) return "busy";
-        return "rate_limited"; // the AI provider's own usage limit, or a model that is unavailable
-    }
     return "server";
 }
 
@@ -120,18 +147,20 @@ export function createApiClient({ baseUrl = "", fetch: fetchFn = globalThis.fetc
             if (options.signal?.aborted) return failure("aborted");
             if (timeout.aborted) return failure("timeout");
             // Not JSON: a proxy's error page, or a connection cut half-way.
-            return failure(response.ok ? "server" : kindForStatus(response.status, ""), { status: response.status });
+            return failure(response.ok ? "server" : kindForStatus(response.status), { status: response.status });
         }
 
         if (response.ok) return { ok: true, data: payload as T };
 
-        const record = (payload ?? {}) as { error?: unknown; fields?: unknown };
+        const record = (payload ?? {}) as { code?: unknown; error?: unknown; fields?: unknown };
         const serverMessage = typeof record.error === "string" && record.error ? record.error : undefined;
-        const kind = kindForStatus(response.status, serverMessage ?? "");
+        const code = isErrorCode(record.code) ? record.code : undefined;
+        const kind = code ? KIND_FOR_CODE[code] : kindForStatus(response.status);
         const seconds = retryAfter(response);
 
         return failure(kind, {
             status: response.status,
+            ...(code ? { code } : {}),
             ...(serverMessage ? { message: serverMessage } : {}),
             ...(isFieldErrors(record.fields) ? { fields: record.fields } : {}),
             ...(seconds ? { retryAfterSeconds: seconds } : {}),

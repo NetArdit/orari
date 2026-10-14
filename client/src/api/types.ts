@@ -48,6 +48,9 @@ export interface HealthAnswer {
     aiConfigured: boolean;
 }
 
+/** The stable name of an error, from the server's own list. The Albanian text beside it is only for display. */
+export type ErrorCode = (typeof schema.ERROR_CODES)[number];
+
 /** One field the server refused, e.g. { path: "structured.endDate", message: "Data nuk është e vlefshme." }. */
 export interface FieldError {
     path: string;
