@@ -18,7 +18,7 @@ Node 24.20, Express 5.2.1 with helmet and express-rate-limit (app built by `crea
 Local repository, branch `main`, no remote. Baseline of the untouched project: `b68ef0e`.
 
 ## Gate
-Batches 0 to 4 accepted by Codex. Batch 5 ACCEPTED WITH CONDITIONS. Codex has ruled on the accounts architecture (see `CODEX_DECISIONS.md`, entry for `codex/08`). Batch 6 reviewed (hosting research partially accepted, design research incomplete, live AI not achieved). Batch 7 delivered, partially, awaiting Codex's verdict: planner screens in both styles and all colour modes; appearance settings contract; AI model configuration; account logic over an in-memory repository (62 tests); second bounded live AI attempt (parse 200 in 17.1 s; plan 429); the in-app design evidence pass was NOT achieved. No account routes, database driver, deployment or e-mail.
+Batches 0 to 4 accepted by Codex. Batch 5 ACCEPTED WITH CONDITIONS. Codex has ruled on the accounts architecture (see `CODEX_DECISIONS.md`, entry for `codex/08`). Batch 7 ACCEPTED WITH CONDITIONS (see CODEX_DECISIONS). Batch 8 in progress: account HTTP layer over the in-memory repository (non-production), account screens against a fake, repository contract fixes, a mail outbox, an unconnected PostgreSQL adapter. Disk is the binding constraint (about 250 MB free): no installs, and builds and browser runs are minimised.
 
 ## Owner decisions, 2026-10-14 (these supersede earlier working assumptions)
 - Name: **Orari**.

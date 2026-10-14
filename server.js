@@ -1,6 +1,12 @@
 import dotenv from "dotenv";
 import { createApp } from "./lib/app.js";
 import { createAi, resolveModels } from "./lib/ai.js";
+import { createAccounts } from "./lib/accounts/http.js";
+import { createMemoryAccountsRepository } from "./lib/accounts/memoryRepository.js";
+import { createPasswordHasher } from "./lib/accounts/password.js";
+import { createPwnedCheck } from "./lib/accounts/pwned.js";
+import { createAccountService } from "./lib/accounts/service.js";
+import { createTestMail } from "./lib/accounts/testMail.js";
 
 dotenv.config();
 
@@ -30,10 +36,32 @@ try {
 
 const { parseNaturalLanguageRequest, generateStudyPlan } = createAi({ models });
 
+/* Accounts exist only when asked for, and only in memory for now: no database, no mail provider and
+   no host have been chosen. Everything is lost when the process stops, and the page says so. */
+let accounts = null;
+if (process.env.ACCOUNTS_MODE === "memory") {
+    const baseUrl = (process.env.ORARI_BASE_URL || `http://localhost:${PORT}`).replace(/\/$/, "");
+    const service = createAccountService({
+        repo: createMemoryAccountsRepository(),
+        hasher: createPasswordHasher(),
+        mail: createTestMail({ directory: "dev-mail" }),
+        passwordCheck: createPwnedCheck(),
+        baseUrl,
+    });
+    // Mail that could not be sent is retried from the outbox; this also picks up what a restart left.
+    setInterval(() => service.dispatchMail().catch(() => undefined), 60_000).unref();
+    accounts = {
+        ...createAccounts({ service, allowedOrigins: [new URL(baseUrl).origin], secureCookies: process.env.ORARI_INSECURE_COOKIES !== "1" }),
+        mode: "memory",
+    };
+    console.error("ACCOUNTS_MODE=memory: accounts are kept in memory and lost on restart; mail is written to dev-mail/ and not sent. Not for real users.");
+}
+
 const app = createApp({
     aiConfigured: AI_CONFIGURED,
     parseNaturalLanguageRequest,
     generateStudyPlan,
+    accounts,
 });
 
 /* =========================================

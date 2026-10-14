@@ -512,11 +512,15 @@ describe("every error body carries a stable code beside its message", () => {
         const { ERROR_CODES } = await import("../lib/schema.js");
         const { readFileSync } = await import("node:fs");
         const used = new Set();
-        for (const file of ["lib/app.js", "lib/plan.js"]) {
-            for (const match of readFileSync(new URL("../" + file, import.meta.url), "utf8").matchAll(/(?:code|errorCode): "([A-Z_]+)"/g)) used.add(match[1]);
+        for (const file of ["lib/app.js", "lib/plan.js", "lib/accounts/service.js", "lib/accounts/http.js", "lib/accounts/password.js", "lib/accounts/memoryRepository.js"]) {
+            const source = readFileSync(new URL("../" + file, import.meta.url), "utf8");
+            for (const match of source.matchAll(/(?:code|errorCode): "([A-Z_]+)"/g)) used.add(match[1]);
+            for (const match of source.matchAll(/sendError\(res, "([A-Z_]+)"/g)) used.add(match[1]);
         }
         assert.equal(new Set(ERROR_CODES).size, ERROR_CODES.length);
-        assert.deepEqual([...used].filter((code) => !ERROR_CODES.includes(code)), []);
+        // EMAIL_TAKEN is the repository's own answer to the service, which turns it into the same reply as for a new address; it is never sent to a client.
+        const internalOnly = new Set(["EMAIL_TAKEN"]);
+        assert.deepEqual([...used].filter((code) => !ERROR_CODES.includes(code) && !internalOnly.has(code)), []);
         assert.deepEqual(ERROR_CODES.filter((code) => !used.has(code)), []);
     });
 });

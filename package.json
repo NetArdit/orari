@@ -7,7 +7,7 @@
     "start": "node server.js",
     "dev": "node --watch server.js",
     "test": "node --test --test-timeout=30000 \"test/**/*.test.js\"",
-    "check": "node --check server.js && node --check lib/app.js && node --check lib/plan.js && node --check lib/ai.js && node --check lib/schema.js && node --check lib/time.js && node --check public/script.js && node --check lib/accounts/password.js && node --check lib/accounts/pwned.js && node --check lib/accounts/memoryRepository.js && node --check lib/accounts/service.js",
+    "check": "node --check server.js && node --check lib/app.js && node --check lib/plan.js && node --check lib/ai.js && node --check lib/schema.js && node --check lib/time.js && node --check public/script.js && node --check lib/accounts/password.js && node --check lib/accounts/pwned.js && node --check lib/accounts/memoryRepository.js && node --check lib/accounts/service.js && node --check lib/accounts/http.js && node --check lib/accounts/testMail.js",
     "client:dev": "vite client",
     "client:build": "tsc -p client && vite build client",
     "client:typecheck": "tsc -p client",

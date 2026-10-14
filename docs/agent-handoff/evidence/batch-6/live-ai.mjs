@@ -3,7 +3,7 @@
  *   one synthetic parse, one short synthetic plan, on one model confirmed free beforehand,
  *   no retry, no fallback to another model, no repair attempt.
  *
- *   node docs/agent-handoff/evidence/batch-6/live-ai.mjs <model-id> [result-file-name]
+ *   node docs/agent-handoff/evidence/batch-6/live-ai.mjs <model-id> [result-file-name] [plan-only]
  *
  * It uses the app's own prompts and validation (lib/ai.js) through a client that lets exactly one
  * request through per call and refuses any further one, so the app's retry and repair logic cannot
@@ -71,14 +71,21 @@ function oneShot(label) {
 const quiet = console.error;
 console.error = () => {}; // the app logs raw model output on failure; keep the terminal to our own summary
 
+const PLAN_ONLY = process.argv[4] === "plan-only";
+
 // 1. Parse. Synthetic text in the register a student in Kosovo might write.
+// (Skipped entirely in plan-only mode: no parse request is made.)
 const parseText = "Prej nesër deri më 28 tetor dua me mësu Biologji, kapitujt 1 deri në 3, se kam provim. Jam e lirë çdo ditë prej orës 17 deri në 19. Të dielave nuk mësoj.";
 const parseAi = createAi({ client: oneShot("parse"), models: [MODEL], deadlineMs: 70_000, sleep: async () => {} });
 let parseResult;
-try {
-    parseResult = await parseAi.parseNaturalLanguageRequest(parseText, "2026-10-14");
-} catch (error) {
-    parseResult = { ok: false, error: String(error?.message ?? error).slice(0, 200) };
+if (PLAN_ONLY) {
+    parseResult = { ok: false, error: "not attempted (plan-only run)" };
+} else {
+    try {
+        parseResult = await parseAi.parseNaturalLanguageRequest(parseText, "2026-10-14");
+    } catch (error) {
+        parseResult = { ok: false, error: String(error?.message ?? error).slice(0, 200) };
+    }
 }
 
 // 2. A short plan: three days, one two-hour window each.
