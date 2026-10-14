@@ -40,6 +40,16 @@ export function foldLine(line: string): string {
     return parts.join(CRLF + " ");
 }
 
+/**
+ * A session id as a UID. Ids come from storage and are not guaranteed to be tame: a line break in one
+ * would start a new content line and let stored text inject calendar properties. Everything outside
+ * letters, digits, dot, dash and underscore is replaced by its code point, which keeps different ids different.
+ */
+export function uidFor(sessionId: string): string {
+    const safe = Array.from(sessionId, (char) => (/[A-Za-z0-9.-]/.test(char) ? char : `_${char.codePointAt(0)!.toString(16)}_`)).join("");
+    return `${safe || "_"}@planifikuesi`;
+}
+
 const stamp = (date: string, time: string) => `${date.replaceAll("-", "")}T${time.replace(":", "")}00`;
 
 const utcStamp = (date: Date) => date.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}Z$/, "Z");
@@ -76,7 +86,7 @@ export function planToIcs(plan: Pick<StoredPlan, "id" | "subject" | "sessions">,
         const details = description(session);
         lines.push(
             "BEGIN:VEVENT",
-            `UID:${session.id}@planifikuesi`,
+            `UID:${uidFor(session.id)}`,
             `DTSTAMP:${utcStamp(options.now)}`,
             `DTSTART:${stamp(session.date, session.startTime)}`,
             `DTEND:${stamp(session.date, session.endTime)}`,

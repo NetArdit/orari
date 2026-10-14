@@ -8,7 +8,7 @@
  * Checks here mirror the server's so that most mistakes are caught before a request is made, and
  * they report with the server's own field paths, so an error from either side lands on the same control.
  */
-import { daysBetween } from "./clock.ts";
+import { addDays, daysBetween } from "./clock.ts";
 import type { CreatePlanRequest, FieldError, ParsedDescription, PlanInputs } from "../api/types.ts";
 
 export const WEEKDAYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"] as const;
@@ -125,7 +125,34 @@ const MESSAGES = {
     tooMany: "Ke shtuar më shumë se sa lejohet.",
     minutes: "Zgjidh një kohëzgjatje nga 10 deri në 240 minuta.",
     noFreeDay: "Të paktën një ditë duhet të mbetet për mësim.",
+    noStudyDate: "Në këtë periudhë nuk mbetet asnjë ditë për mësim. Ndrysho datat, ditët e lira ose ditët pa mësim.",
 } as const;
+
+const WEEKDAY_OF_UTC_DAY: readonly Weekday[] = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
+
+function weekdayOf(date: string): Weekday {
+    const [y, m, d] = date.split("-").map(Number) as [number, number, number];
+    return WEEKDAY_OF_UTC_DAY[new Date(Date.UTC(y, m - 1, d)).getUTCDay()]!;
+}
+
+/**
+ * The dates of the plan on which study is possible at all, going by the days set and the days without
+ * study. It does not subtract busy time: a date counted here can still turn out full once commitments
+ * and sleep are taken off, which only the server works out. Zero here means certainly nothing to plan.
+ */
+export function studyDatesIn(form: Pick<PlanFormState, "startDate" | "endDate" | "days" | "unavailableDates">): number {
+    const anyDaySet = WEEKDAYS.some((day) => form.days[day].mode !== "unset");
+    const span = daysBetween(form.startDate, form.endDate);
+    let count = 0;
+    for (let i = 0; i <= span && i < LIMITS.planDays; i++) {
+        const date = addDays(form.startDate, i);
+        if (form.unavailableDates.includes(date)) continue;
+        const mode = form.days[weekdayOf(date)].mode;
+        // The server's rule: with no day set every day is open; once any day is set, the others are closed.
+        if (mode === "free" || (mode === "unset" && !anyDaySet)) count++;
+    }
+    return count;
+}
 
 /**
  * Checks the form and, if everything holds, gives the plan inputs to send.
@@ -204,6 +231,11 @@ export function buildPlanInputs(form: PlanFormState): BuildResult {
         if (!isRealDate(date)) fail(`unavailableDates.${i}`, MESSAGES.date);
         else if (!unavailableDates.includes(date)) unavailableDates.push(date);
     });
+
+    // A form can be valid field by field and still leave no day to study on: a two-day plan whose
+    // only free weekday falls outside it, or every date marked as a day without study. The server would
+    // answer "no free time" after a round trip; it is said here, on the availability control.
+    if (errors.length === 0 && studyDatesIn(form) === 0) fail("weeklyAvailability", MESSAGES.noStudyDate);
 
     if (errors.length > 0) return { ok: false, errors };
 

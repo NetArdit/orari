@@ -5,6 +5,7 @@
  * Marking a session is shown at once and written afterwards. If the write fails the mark is taken
  * back and the failure is reported, so the screen never claims progress the device did not keep.
  */
+import { PlanExistsError } from "../storage/repository.ts";
 import type { Repository, UnreadablePlan } from "../storage/repository.ts";
 import type { SessionStatus, StoredPlan, StoredProfile } from "../storage/model.ts";
 
@@ -128,7 +129,36 @@ export function createPlanStore(repository: Repository) {
             });
         },
 
-        /** Stores a plan (new, or a changed version of an existing one) and shows it. Nothing is shown if the write fails. */
+        /**
+         * Stores a new plan and shows it. Returns the id it was stored under, or null if it could not be kept.
+         * If its id is already taken (by a plan here, or one another tab stored a moment ago) the existing plan
+         * is left untouched and the new one is stored under another id from `newId`.
+         */
+        addPlan(plan: StoredPlan, newId: () => string = () => crypto.randomUUID()): Promise<string | null> {
+            return enqueue("\u0000new", async () => {
+                let candidate = plan;
+                for (let attempt = 0; attempt < 5; attempt++) {
+                    try {
+                        await repository.createPlan(candidate);
+                    } catch (error) {
+                        if (error instanceof PlanExistsError) {
+                            candidate = { ...candidate, id: newId() };
+                            continue;
+                        }
+                        patch({ saveError: { planId: candidate.id } });
+                        return null;
+                    }
+                    for (const s of candidate.sessions) stored.set(keyOf(candidate.id, s.id), s.status);
+                    const current = ready();
+                    if (current) patch({ plans: withPlan(current.plans, candidate) });
+                    return candidate.id;
+                }
+                patch({ saveError: { planId: plan.id } });
+                return null;
+            });
+        },
+
+        /** Stores a changed version of an existing plan and shows it. Nothing is shown if the write fails. */
         savePlan(plan: StoredPlan): Promise<boolean> {
             return enqueue(plan.id, async () => {
                 try {

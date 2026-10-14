@@ -3,9 +3,9 @@ import { addDays, clockFrom, daysBetween, durationMinutes, minutesOf } from "./c
 import type { Clock } from "./clock.ts";
 import { currentPlan, needsReplan, nextSession, progressOf, sessionState, streakDays, todayAgenda } from "./progress.ts";
 import { buildAdjustRequest, mergeReplan, planFromAnswer, progressSummaries } from "./replan.ts";
-import { buildPlanInputs, emptyPlanForm, errorsAt, formFromParsed, normaliseTime } from "./planForm.ts";
+import { buildPlanInputs, emptyPlanForm, errorsAt, formFromParsed, normaliseTime, studyDatesIn } from "./planForm.ts";
 import type { PlanFormState } from "./planForm.ts";
-import { escapeText, foldLine, icsFileName, planToIcs } from "./ics.ts";
+import { escapeText, foldLine, icsFileName, planToIcs, uidFor } from "./ics.ts";
 import type { ParsedDescription, PlanAnswer } from "../api/types.ts";
 import type { StoredPlan, StoredSession } from "../storage/model.ts";
 
@@ -395,6 +395,42 @@ describe("the plan form", () => {
         expect(errorsOf((f) => (f.unavailableDates = ["2026-10-16", "nesër"]))).toEqual([{ path: "structured.unavailableDates.1", message: "Data nuk është e vlefshme." }]);
     });
 
+    test("a form that is valid field by field but leaves no day to study on is refused, on the availability control", () => {
+        const noStudy = [{ path: "structured.weeklyAvailability", message: "Në këtë periudhë nuk mbetet asnjë ditë për mësim. Ndrysho datat, ditët e lira ose ditët pa mësim." }];
+        const freeOn = (f: PlanFormState, day: "mon" | "sat") => (f.days[day] = { mode: "free", windows: [{ start: "08:00", end: "10:00" }] });
+
+        // Wednesday 14 to Thursday 15 October, but only Saturday is free.
+        expect(errorsOf((f) => { f.endDate = "2026-10-15"; freeOn(f, "sat"); })).toEqual(noStudy);
+        // Every date of the plan is marked as a day without study.
+        expect(errorsOf((f) => { f.endDate = "2026-10-16"; f.unavailableDates = ["2026-10-14", "2026-10-15", "2026-10-16"]; })).toEqual(noStudy);
+        // The only free weekday in range is also a day without study.
+        expect(errorsOf((f) => { f.endDate = "2026-10-20"; freeOn(f, "sat"); f.unavailableDates = ["2026-10-17"]; })).toEqual(noStudy);
+        // The two days in range are both off.
+        expect(errorsOf((f) => { f.endDate = "2026-10-15"; f.days.wed = { mode: "off", windows: [] }; f.days.thu = { mode: "off", windows: [] }; })).toEqual(noStudy);
+
+        // One day left is enough.
+        expect(build((f) => { f.endDate = "2026-10-17"; freeOn(f, "sat"); }).ok).toBe(true);
+        expect(build((f) => { f.endDate = "2026-10-16"; f.unavailableDates = ["2026-10-14", "2026-10-15"]; }).ok).toBe(true);
+    });
+
+    test("counting possible study dates follows the server's rule for days that were not set", () => {
+        const form = filled(); // 14 to 30 October: 17 dates
+        expect(studyDatesIn(form)).toBe(17);
+        form.days.sun = { mode: "off", windows: [] }; // one day set, so the unset ones are closed
+        expect(studyDatesIn(form)).toBe(0);
+        form.days.mon = { mode: "free", windows: [{ start: "08:00", end: "09:00" }] }; // Mondays 19 and 26
+        expect(studyDatesIn(form)).toBe(2);
+        form.unavailableDates = ["2026-10-19"];
+        expect(studyDatesIn(form)).toBe(1);
+    });
+
+    test("the server agrees: the same inputs are refused there with NO_FREE_TIME", async () => {
+        const { buildCalendarOrError } = await import("../../../lib/plan.js");
+        // What the form would have sent for "only Saturday free, plan Wednesday to Thursday".
+        const { calendar } = buildCalendarOrError({ startDate: "2026-10-14", endDate: "2026-10-15", weeklyAvailability: [{ day: "sat", off: false, windows: [{ start: "08:00", end: "10:00" }] }], commitments: [], unavailableDates: [] });
+        expect(calendar?.every((day: { totalMinutes: number }) => day.totalMinutes === 0)).toBe(true);
+    });
+
     test("energy is sent only if something was chosen", () => {
         const result = build((f) => (f.energy.morning = "high"));
         expect(result.ok && result.structured.energy).toEqual({ morning: "high", afternoon: null, evening: null });
@@ -466,6 +502,24 @@ describe("calendar export", () => {
 
     test("text is escaped as the standard requires", () => {
         expect(escapeText("a;b,c\\d\ne\r\nf")).toBe("a\\;b\\,c\\\\d\\ne\\nf");
+    });
+
+    test("a session id cannot break out of its UID line, and different ids stay different", () => {
+        expect(uidFor("3f2b9c1e-aaaa-4bbb-8ccc-0123456789ab")).toBe("3f2b9c1e-aaaa-4bbb-8ccc-0123456789ab@planifikuesi");
+        expect(uidFor("s1")).toBe("s1@planifikuesi");
+        const hostile = "x\r\nATTENDEE:mailto:someone@example.test\nSUMMARY:injected;a,b\\";
+        const uid = uidFor(hostile);
+        expect(uid).toMatch(/^[A-Za-z0-9._-]+@planifikuesi$/);
+        expect(uid).not.toMatch(/[\r\n:;,\\ ]/);
+        // Encoding is one-to-one: ids that differ only in an awkward character do not collide.
+        expect(new Set(["a b", "a_b", "a-b", "a\nb", "a_20_b", "ab"].map(uidFor)).size).toBe(6);
+        expect(uidFor("")).toBe("_@planifikuesi");
+
+        const ics = planToIcs(plan([{ ...session("2026-10-15", "08:00", "09:00"), id: hostile }]), { now: new Date("2026-10-14T10:00:00.000Z") });
+        const lines = ics.replace(/\r\n /g, "").split("\r\n");
+        expect(lines.filter((l) => l.startsWith("ATTENDEE") || l === "SUMMARY:injected;a,b\\")).toEqual([]);
+        expect(lines.filter((l) => l.startsWith("UID:"))).toHaveLength(1);
+        expect(lines.filter((l) => l.startsWith("SUMMARY:"))).toHaveLength(1);
     });
 
     test("long lines are folded at 75 bytes without splitting a character", () => {

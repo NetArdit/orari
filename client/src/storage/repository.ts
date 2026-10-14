@@ -26,6 +26,13 @@ export class AlreadySetUpError extends Error {
     }
 }
 
+/** Thrown by createPlan when a plan with that id is already stored. The stored plan is left as it is. */
+export class PlanExistsError extends Error {
+    constructor(public readonly planId: string) {
+        super("plan_exists");
+    }
+}
+
 export interface ImportSummary {
     plansImported: number;
     /** Plans in the file that failed the checks. */
@@ -111,6 +118,21 @@ export function createRepository(store: KeyValueStore, now: () => Date = () => n
             return parsed.success ? parsed.data : null;
         },
 
+        /**
+         * Stores a NEW plan. If a plan with the same id is already there, whether from this tab or another
+         * one a moment ago, nothing is written and PlanExistsError is thrown: a new plan never replaces an
+         * existing one. The check is part of the write.
+         */
+        async createPlan(plan: StoredPlan): Promise<void> {
+            try {
+                await store.commit([{ key: PLAN + plan.id, value: StoredPlan.parse(plan) }], { onlyIfAbsent: [PLAN + plan.id] });
+            } catch (error) {
+                if (error instanceof PreconditionFailedError) throw new PlanExistsError(plan.id);
+                throw error;
+            }
+        },
+
+        /** Stores a changed version of a plan, replacing the stored one with the same id. For new plans use createPlan. */
         async savePlan(plan: StoredPlan): Promise<void> {
             await store.commit([{ key: PLAN + plan.id, value: StoredPlan.parse(plan) }]);
         },

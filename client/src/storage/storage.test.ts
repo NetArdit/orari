@@ -1,7 +1,7 @@
 import { describe, expect, test } from "vitest";
 import { SCHEMA_VERSION } from "./model.ts";
 import type { StoredPlan, StoredProfile } from "./model.ts";
-import { AlreadySetUpError, createRepository, StorageTooNewError } from "./repository.ts";
+import { AlreadySetUpError, createRepository, PlanExistsError, StorageTooNewError } from "./repository.ts";
 import { createMemoryStore, PreconditionFailedError } from "./store.ts";
 import type { KeyValueStore } from "./store.ts";
 import { convertLegacyUser, LEGACY_CURRENT_KEY, LEGACY_USERS_KEY, migrateFromLegacy, readLegacy } from "./legacy.ts";
@@ -197,6 +197,47 @@ describe("two tabs at once", () => {
         ]);
         expect(outcomes.map((o) => o.status).sort()).toEqual(["already_set_up", "migrated"]);
         expect(Object.keys(store.dump()).sort()).toEqual(["meta", "plan:p1", "profile"]);
+    });
+
+    test("a new plan never replaces a stored plan with the same id", async () => {
+        const store = createMemoryStore();
+        const repo = createRepository(store, fixedNow);
+        await repo.initialise(profile, [{ ...plan("p1"), subject: "I pari" }], { fromLegacy: false });
+        const before = store.dump();
+
+        await expect(repo.createPlan({ ...plan("p1"), subject: "Ndërhyrësi" })).rejects.toBeInstanceOf(PlanExistsError);
+        expect(store.dump()).toEqual(before);
+
+        await repo.createPlan({ ...plan("p2"), subject: "I dyti" });
+        expect((await repo.listPlans()).plans.map((p) => p.subject).sort()).toEqual(["I dyti", "I pari"]);
+    });
+
+    test("two tabs creating a plan under the same id at once: one is stored whole, the other is refused", async () => {
+        const store = createMemoryStore();
+        await createRepository(store, fixedNow).initialise(profile, [], { fromLegacy: false });
+
+        const results = await Promise.allSettled([
+            createRepository(store, fixedNow).createPlan({ ...plan("same", undefined, [session("a1")]), subject: "Skeda A" }),
+            createRepository(store, fixedNow).createPlan({ ...plan("same", undefined, [session("b1"), session("b2")]), subject: "Skeda B" }),
+        ]);
+
+        expect(results.map((r) => r.status)).toEqual(["fulfilled", "rejected"]);
+        expect((results[1] as PromiseRejectedResult).reason).toBeInstanceOf(PlanExistsError);
+        const kept = await createRepository(store, fixedNow).getPlan("same");
+        expect([kept?.subject, kept?.sessions.map((s) => s.id)]).toEqual(["Skeda A", ["a1"]]);
+    });
+
+    test("an invalid new plan is refused before anything is written", async () => {
+        const store = createMemoryStore();
+        await expect(createRepository(store, fixedNow).createPlan({ ...plan("p1"), startDate: "nesër" })).rejects.toThrow();
+        expect(store.dump()).toEqual({});
+    });
+
+    test("saving a changed plan still replaces the stored one on purpose", async () => {
+        const repo = createRepository(createMemoryStore(), fixedNow);
+        await repo.initialise(profile, [plan("p1")], { fromLegacy: false });
+        await repo.savePlan({ ...plan("p1"), strategy: "E ndryshuar" });
+        expect((await repo.getPlan("p1"))?.strategy).toBe("E ndryshuar");
     });
 
     test("a plan saved by another tab while a restore is being prepared does not survive the restore", async () => {

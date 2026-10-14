@@ -152,8 +152,10 @@ export function createPlanFlow({ api, store, now = () => new Date(), newId }: Fl
         if (signal.aborted) return { ok: false, cancelled: true };
 
         const plan = planFromAnswer(result.data, built.structured as Record<string, unknown>, now(), newId);
-        if (!(await store.savePlan(plan))) return { ok: false, failure: STORAGE_FAILED };
-        return { ok: true, result: { planId: plan.id, sessions: plan.sessions.length, warnings: plan.warnings } };
+        // addPlan never replaces a plan that is already stored; on an id clash it stores under another id.
+        const planId = await store.addPlan(plan, newId);
+        if (!planId) return { ok: false, failure: STORAGE_FAILED };
+        return { ok: true, result: { planId, sessions: plan.sessions.length, warnings: plan.warnings } };
     }, () => now().getTime());
 }
 

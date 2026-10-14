@@ -186,6 +186,45 @@ describe("the plan store", () => {
         expect(statuses(store)).toEqual(["pending"]);
     });
 
+    test("adding a plan whose id is taken leaves the existing plan untouched and stores the new one under another id", async () => {
+        const existing = { ...plan("taken", [session("s1", "2026-10-14", "completed")]), subject: "Ekzistuesi" };
+        const { store, repository } = await setup([existing]);
+        const offers = ["taken", "free"]; // the generator repeats the taken id once before a free one
+
+        const id = await store.addPlan({ ...plan("taken", [session("n1", "2026-10-15")], "2026-10-09T00:00:00.000Z"), subject: "I riu" }, () => offers.shift() ?? "exhausted");
+
+        expect(id).toBe("free");
+        expect(await repository.getPlan("taken")).toEqual(existing);
+        expect((await repository.getPlan("free"))?.subject).toBe("I riu");
+        expect(readyState(store).plans.map((p) => [p.id, p.subject])).toEqual([["free", "I riu"], ["taken", "Ekzistuesi"]]);
+    });
+
+    test("adding a plan that another tab stored under the same id a moment ago does not replace it either", async () => {
+        const { store, repository } = await setup([]);
+        // Not in this tab's memory: written straight to storage, as another tab would.
+        await repository.createPlan({ ...plan("clash", []), subject: "Nga skeda tjetër" });
+
+        const id = await store.addPlan({ ...plan("clash", []), subject: "Nga kjo skedë" }, () => "other");
+
+        expect(id).toBe("other");
+        expect((await repository.getPlan("clash"))?.subject).toBe("Nga skeda tjetër");
+        expect((await repository.getPlan("other"))?.subject).toBe("Nga kjo skedë");
+    });
+
+    test("if no free id can be found, or the write fails, nothing is stored or shown and it is reported", async () => {
+        const { store, memory, repository } = await setup([plan("taken", [])]);
+
+        expect(await store.addPlan(plan("taken", []), () => "taken")).toBeNull();
+        expect(readyState(store).saveError).toEqual({ planId: "taken" });
+        expect((await repository.listPlans()).plans).toHaveLength(1);
+
+        store.dismissSaveError();
+        memory.failNextCommit();
+        expect(await store.addPlan(plan("p9", []))).toBeNull();
+        expect(readyState(store).plans.map((p) => p.id)).toEqual(["taken"]);
+        expect(readyState(store).saveError).toEqual({ planId: "p9" });
+    });
+
     test("saving a plan shows it only once it is stored; a failed save shows nothing and reports it", async () => {
         const { store, memory } = await setup([]);
 
@@ -288,6 +327,24 @@ describe("creating a plan", () => {
         const saved = await repository.getPlan("id-1");
         expect([saved?.subject, saved?.sessions.map((s) => [s.id, s.status]), saved?.structured.subject]).toEqual(["Matematikë", [["x1", "pending"], ["x2", "pending"]], "Matematikë"]);
         expect(readyState(store).plans.map((p) => p.id)).toEqual(["id-1"]);
+    });
+
+    test("a generated plan id that is already in use does not overwrite that plan: the new one gets another id", async () => {
+        const existing = { ...plan("id-1", [session("old", "2026-10-14", "completed")]), subject: "Ekzistuesi" };
+        const { store, repository } = await setup([existing]);
+        const { api, answerWith } = fakeApi();
+        answerWith(async () => ({ ok: true, data: answer([session("x1", "2026-10-15")]) }));
+        let n = 0;
+        const flow = createPlanFlow({ api, store, now, newId: () => `id-${++n}` }); // first offer: "id-1", which is taken
+
+        start(flow);
+        await tick();
+        await store.settled();
+        await tick();
+
+        expect(flow.getState()).toMatchObject({ status: "done", result: { planId: "id-2" } });
+        expect(await repository.getPlan("id-1")).toEqual(existing);
+        expect((await repository.getPlan("id-2"))?.sessions.map((s) => s.id)).toEqual(["x1"]);
     });
 
     test("an invalid form is refused with its field errors and nothing is sent", async () => {
