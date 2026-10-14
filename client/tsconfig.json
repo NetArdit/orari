@@ -21,7 +21,8 @@
         "allowJs": true,
         "checkJs": false,
         "types": [
-            "vite/client"
+            "vite/client",
+            "node"
         ],
         "allowImportingTsExtensions": true
     },

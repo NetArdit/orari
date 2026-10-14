@@ -12,7 +12,8 @@
     "client:build": "tsc -p client && vite build client",
     "client:typecheck": "tsc -p client",
     "client:test": "vitest run --root client",
-    "test:all": "npm test && npm run client:typecheck && npm run client:test"
+    "test:all": "npm test && npm run client:typecheck && npm run client:test",
+    "client:build:e2e": "tsc -p client && node e2e/build-harness.mjs"
   },
   "dependencies": {
     "dotenv": "^16.6.1",

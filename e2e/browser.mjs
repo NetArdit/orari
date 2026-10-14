@@ -98,26 +98,56 @@ export async function openBrowser({ debugPort, width = 1280, height = 900, mobil
     await cdp.send("Emulation.setDeviceMetricsOverride", { width, height, deviceScaleFactor: 1, mobile });
     if (initScript) await cdp.send("Page.addScriptToEvaluateOnNewDocument", { source: initScript });
 
-    async function evaluate(expression) {
-        const r = await cdp.send("Runtime.evaluate", { expression, returnByValue: true, awaitPromise: true });
-        if (r.exceptionDetails) throw new Error(r.exceptionDetails.exception?.description ?? r.exceptionDetails.text);
-        return r.result.value;
-    }
-
-    async function goto(url) {
-        const loaded = new Promise((resolve) => cdp.on("Page.loadEventFired", resolve));
-        await cdp.send("Page.navigate", { url });
-        await loaded;
-        await sleep(400);
-    }
-
-    async function waitFor(expression, what, timeoutMs = 10_000) {
-        const startedAt = Date.now();
-        while (Date.now() - startedAt < timeoutMs) {
-            if (await evaluate(expression)) return;
-            await sleep(100);
+    /** evaluate / goto / waitFor for one tab. */
+    function toolsFor(tab) {
+        async function evaluate(expression) {
+            const r = await tab.send("Runtime.evaluate", { expression, returnByValue: true, awaitPromise: true });
+            if (r.exceptionDetails) throw new Error(r.exceptionDetails.exception?.description ?? r.exceptionDetails.text);
+            return r.result.value;
         }
-        throw new Error("Timed out waiting for: " + what);
+
+        async function goto(url) {
+            const loaded = new Promise((resolve) => tab.on("Page.loadEventFired", resolve));
+            await tab.send("Page.navigate", { url });
+            await loaded;
+            await sleep(400);
+        }
+
+        async function waitFor(expression, what, timeoutMs = 10_000) {
+            const startedAt = Date.now();
+            while (Date.now() - startedAt < timeoutMs) {
+                if (await evaluate(expression)) return;
+                await sleep(100);
+            }
+            throw new Error("Timed out waiting for: " + what);
+        }
+
+        return { cdp: tab, evaluate, goto, waitFor };
+    }
+
+    const { evaluate, goto, waitFor } = toolsFor(cdp);
+
+    /**
+     * A second tab in the same browser profile: same origin storage as the first, its own page and
+     * its own script thread. For journeys where two tabs act at the same moment.
+     */
+    async function newTab() {
+        const res = await fetch(`http://127.0.0.1:${debugPort}/json/new?about:blank`, { method: "PUT" });
+        const target = await res.json();
+        const ws = new WebSocket(target.webSocketDebuggerUrl);
+        await new Promise((resolve, reject) => {
+            ws.addEventListener("open", resolve);
+            ws.addEventListener("error", reject);
+        });
+        const tab = new Cdp(ws);
+        await tab.send("Page.enable");
+        await tab.send("Runtime.enable");
+        tab.on("Runtime.exceptionThrown", (p) => result.consoleErrors.push(p.exceptionDetails?.exception?.description ?? p.exceptionDetails?.text));
+        tab.on("Runtime.consoleAPICalled", (p) => {
+            if (p.type === "error") result.consoleErrors.push(p.args.map((a) => a.value ?? a.description).join(" "));
+        });
+        if (initScript) await tab.send("Page.addScriptToEvaluateOnNewDocument", { source: initScript });
+        return toolsFor(tab);
     }
 
     function check(name, pass, detail) {
@@ -160,5 +190,5 @@ export async function openBrowser({ debugPort, width = 1280, height = 900, mobil
         await finish(resultFile);
     }
 
-    return { cdp, result, evaluate, goto, waitFor, check, screenshot, finish, run };
+    return { cdp, result, evaluate, goto, waitFor, newTab, check, screenshot, finish, run };
 }
