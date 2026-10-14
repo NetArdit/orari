@@ -6,7 +6,8 @@
  * What is not: the password and the e-mail address. There is no account any more; the data stays on
  * this device. The old keys are only read here, never changed or removed; that happens at cutover.
  */
-import { StoredPlan, StoredProfile } from "./model.ts";
+import { SESSION_KINDS, SESSION_STATUSES, StoredPlan, StoredProfile } from "./model.ts";
+import { AlreadySetUpError } from "./repository.ts";
 import type { Repository } from "./repository.ts";
 
 export const LEGACY_USERS_KEY = "studyflow_users";
@@ -26,6 +27,13 @@ export interface LegacyConversion {
     rejected: RejectedPlan[];
     /** Sessions whose id was shared with another session of the same plan and got a new one. */
     sessionIdsRepaired: number;
+    /**
+     * Sessions whose status or kind was not one this app knows. They are stored as "pending" and
+     * "learning", which claims no progress, and counted here so the person can be told instead of
+     * the change passing unnoticed.
+     */
+    sessionsWithUnknownStatus: number;
+    sessionsWithUnknownKind: number;
 }
 
 export type LegacyRead =
@@ -89,9 +97,28 @@ export function convertLegacyUser(user: Record<string, unknown>, newId: () => st
     const plans: StoredPlan[] = [];
     const rejected: RejectedPlan[] = [];
     let sessionIdsRepaired = 0;
-    const planIds = new Set<string>();
+    let sessionsWithUnknownStatus = 0;
+    let sessionsWithUnknownKind = 0;
 
-    for (const raw of Array.isArray(user.plans) ? user.plans : []) {
+    const rawPlans = (Array.isArray(user.plans) ? user.plans : []) as unknown[];
+
+    // A replacement id must differ from every id in use, including ones that appear further down the
+    // list and ones handed out a moment ago. The generator is random, but "random" is not "checked".
+    const fresh = (taken: Set<string>): string => {
+        for (let attempt = 0; attempt < 50; attempt++) {
+            const id = newId();
+            if (id && !taken.has(id)) {
+                taken.add(id);
+                return id;
+            }
+        }
+        throw new Error("id_generator_keeps_colliding");
+    };
+
+    const planIds = new Set<string>();
+    const allPlanIds = new Set(rawPlans.filter(isRecord).map((p) => text(p.id, 100)).filter(Boolean));
+
+    for (const raw of rawPlans) {
         const subject = isRecord(raw) ? text(raw.subject, 200) : "";
         if (!isRecord(raw)) {
             rejected.push({ subject, reason: "not_an_object" });
@@ -100,19 +127,25 @@ export function convertLegacyUser(user: Record<string, unknown>, newId: () => st
 
         // The old server numbered sessions from 1 on every adjustment, so one plan can hold the same id twice.
         // Ticking one of them would change the other; later duplicates get a fresh id.
+        const rawSessions = (Array.isArray(raw.sessions) ? raw.sessions : []).filter(isRecord);
         const seen = new Set<string>();
-        const sessions = (Array.isArray(raw.sessions) ? raw.sessions : []).filter(isRecord).map((session) => {
+        const taken = new Set(rawSessions.map((s) => text(s.id, 100)).filter(Boolean));
+        let unknownStatus = 0;
+        let unknownKind = 0;
+        const sessions = rawSessions.map((session) => {
             let id = text(session.id, 100);
             if (!id || seen.has(id)) {
-                id = newId();
+                id = fresh(taken);
                 sessionIdsRepaired++;
             }
             seen.add(id);
+            if (!(SESSION_STATUSES as readonly unknown[]).includes(session.status)) unknownStatus++;
+            if (!(SESSION_KINDS as readonly unknown[]).includes(session.type)) unknownKind++;
             return { ...session, id };
         });
 
         let id = text(raw.id, 100);
-        if (!id || planIds.has(id)) id = newId();
+        if (!id || planIds.has(id)) id = fresh(allPlanIds);
 
         const parsed = StoredPlan.safeParse({
             ...raw,
@@ -125,12 +158,15 @@ export function convertLegacyUser(user: Record<string, unknown>, newId: () => st
         if (parsed.success) {
             planIds.add(id);
             plans.push(parsed.data);
+            // Counted only for plans that are actually carried over.
+            sessionsWithUnknownStatus += unknownStatus;
+            sessionsWithUnknownKind += unknownKind;
         } else {
             rejected.push({ subject, reason: parsed.error.issues[0]?.path.join(".") || "shape" });
         }
     }
 
-    return { profile, plans, rejected, sessionIdsRepaired };
+    return { profile, plans, rejected, sessionIdsRepaired, sessionsWithUnknownStatus, sessionsWithUnknownKind };
 }
 
 export type MigrationOutcome =
@@ -138,7 +174,7 @@ export type MigrationOutcome =
     | { status: "nothing_to_migrate" }
     | { status: "unreadable"; reason: string }
     | { status: "choose"; candidates: { id: string; name: string; plans: number }[] }
-    | { status: "migrated"; plans: number; rejected: RejectedPlan[]; sessionIdsRepaired: number; otherAccounts: number };
+    | { status: "migrated"; plans: number; rejected: RejectedPlan[]; sessionIdsRepaired: number; sessionsWithUnknownStatus: number; sessionsWithUnknownKind: number; otherAccounts: number };
 
 /**
  * Runs once per device: if the new storage is empty and the old page left data, copy it.
@@ -159,13 +195,21 @@ export async function migrateFromLegacy(repository: Repository, storage: Readabl
     if (read.status !== "found") return read;
 
     const converted = convertLegacyUser(read.user);
-    await repository.initialise(converted.profile, converted.plans, { fromLegacy: true });
+    try {
+        await repository.initialise(converted.profile, converted.plans, { fromLegacy: true });
+    } catch (error) {
+        // Another tab of the app finished the same copy first. Its data is there; ours is not needed.
+        if (error instanceof AlreadySetUpError) return { status: "already_set_up" };
+        throw error;
+    }
 
     return {
         status: "migrated",
         plans: converted.plans.length,
         rejected: converted.rejected,
         sessionIdsRepaired: converted.sessionIdsRepaired,
+        sessionsWithUnknownStatus: converted.sessionsWithUnknownStatus,
+        sessionsWithUnknownKind: converted.sessionsWithUnknownKind,
         otherAccounts: read.otherAccounts,
     };
 }

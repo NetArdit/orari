@@ -1,8 +1,9 @@
 import { describe, expect, test } from "vitest";
 import { SCHEMA_VERSION } from "./model.ts";
 import type { StoredPlan, StoredProfile } from "./model.ts";
-import { createRepository, StorageTooNewError } from "./repository.ts";
-import { createMemoryStore } from "./store.ts";
+import { AlreadySetUpError, createRepository, StorageTooNewError } from "./repository.ts";
+import { createMemoryStore, PreconditionFailedError } from "./store.ts";
+import type { KeyValueStore } from "./store.ts";
 import { convertLegacyUser, LEGACY_CURRENT_KEY, LEGACY_USERS_KEY, migrateFromLegacy, readLegacy } from "./legacy.ts";
 
 const NOW = new Date("2026-10-14T10:00:00.000Z");
@@ -151,7 +152,93 @@ describe("repository", () => {
     });
 });
 
+describe("two tabs at once", () => {
+    test("the store itself refuses a write whose precondition no longer holds, and changes nothing", async () => {
+        const store = createMemoryStore({ profile });
+        const before = store.dump();
+        await expect(store.commit([{ key: "meta", value: 1 }, { key: "profile", value: 2 }], { onlyIfAbsent: ["profile"] })).rejects.toBeInstanceOf(PreconditionFailedError);
+        expect(store.dump()).toEqual(before);
+    });
+
+    test("two first set-ups started together: exactly one wins and nothing of the other is stored", async () => {
+        const store = createMemoryStore();
+        const tabA = createRepository(store, fixedNow);
+        const tabB = createRepository(store, fixedNow);
+
+        const results = await Promise.allSettled([
+            tabA.initialise({ ...profile, name: "Skeda A" }, [plan("a1"), plan("a2")], { fromLegacy: false }),
+            tabB.initialise({ ...profile, name: "Skeda B" }, [plan("b1")], { fromLegacy: false }),
+        ]);
+
+        expect(results.map((r) => r.status).sort()).toEqual(["fulfilled", "rejected"]);
+        const loser = results.find((r) => r.status === "rejected") as PromiseRejectedResult;
+        expect(loser.reason).toBeInstanceOf(AlreadySetUpError);
+        // Never a mixture of the two.
+        expect(Object.keys(store.dump()).sort()).toEqual(["meta", "plan:a1", "plan:a2", "profile"]);
+        expect((await tabA.getProfile())?.name).toBe("Skeda A");
+    });
+
+    test("the same, in the other order: whichever write lands first is kept whole", async () => {
+        const store = createMemoryStore();
+        const results = await Promise.allSettled([
+            createRepository(store, fixedNow).initialise({ ...profile, name: "B" }, [plan("b1")], { fromLegacy: false }),
+            createRepository(store, fixedNow).initialise({ ...profile, name: "A" }, [plan("a1"), plan("a2")], { fromLegacy: false }),
+        ]);
+        expect(results.map((r) => r.status)).toEqual(["fulfilled", "rejected"]);
+        expect(Object.keys(store.dump()).sort()).toEqual(["meta", "plan:b1", "profile"]);
+    });
+
+    test("two tabs copying the old page's data together: one copies, the other finds it done, neither fails", async () => {
+        const me = legacyUser();
+        const store = createMemoryStore();
+        const outcomes = await Promise.all([
+            migrateFromLegacy(createRepository(store, fixedNow), legacyStorage(me, [me])),
+            migrateFromLegacy(createRepository(store, fixedNow), legacyStorage(me, [me])),
+        ]);
+        expect(outcomes.map((o) => o.status).sort()).toEqual(["already_set_up", "migrated"]);
+        expect(Object.keys(store.dump()).sort()).toEqual(["meta", "plan:p1", "profile"]);
+    });
+
+    test("a plan saved by another tab while a restore is being prepared does not survive the restore", async () => {
+        const inner = createMemoryStore();
+        await createRepository(inner, fixedNow).initialise(profile, [plan("old")], { fromLegacy: false });
+        const otherTab = createRepository(inner, fixedNow);
+
+        // The other tab's save lands at the last possible moment: after the restoring tab has read
+        // everything it reads, immediately before its write. Deciding what to remove from an earlier
+        // look at storage would leave this plan behind.
+        const store: KeyValueStore = {
+            get: (key) => inner.get(key),
+            keys: (prefix) => inner.keys(prefix),
+            commit: async (writes, options) => {
+                await otherTab.savePlan(plan("saved-meanwhile"));
+                return inner.commit(writes, options);
+            },
+        };
+        await createRepository(store, fixedNow).restoreBackup({ format: "planifikues-kopje", schemaVersion: 1, exportedAt: "x", profile, plans: [plan("from-backup")] });
+
+        expect((await otherTab.listPlans()).plans.map((p) => p.id)).toEqual(["from-backup"]);
+    });
+});
+
 describe("backup and restore", () => {
+    test("plans that repeat an id inside the backup are not merged: the first is kept, the rest are counted", async () => {
+        const repo = createRepository(createMemoryStore(), fixedNow);
+        const first = { ...plan("same"), subject: "E para" };
+        const second = { ...plan("same"), subject: "E dyta" };
+
+        const summary = await repo.restoreBackup({ format: "planifikues-kopje", schemaVersion: 1, exportedAt: "x", profile, plans: [first, second, plan("other"), second] });
+
+        expect(summary).toEqual({ plansImported: 2, plansRejected: 0, plansDuplicated: 2 });
+        expect((await repo.getPlan("same"))?.subject).toBe("E para");
+    });
+
+    test("a first set-up given two plans with one id is refused whole", async () => {
+        const store = createMemoryStore();
+        await expect(createRepository(store, fixedNow).initialise(profile, [plan("same"), plan("same")], { fromLegacy: false })).rejects.toThrow("duplicate_plan_ids");
+        expect(store.dump()).toEqual({});
+    });
+
     test("a backup holds the profile and every plan, and restoring it on an empty device gives the same data", async () => {
         const source = createRepository(createMemoryStore(), fixedNow);
         await source.initialise(profile, [plan("p1"), plan("p2", "2026-10-05T08:00:00.000Z")], { fromLegacy: false });
@@ -163,7 +250,7 @@ describe("backup and restore", () => {
         const target = createRepository(createMemoryStore(), fixedNow);
         const summary = await target.restoreBackup(JSON.parse(JSON.stringify(backup)));
 
-        expect(summary).toEqual({ plansImported: 2, plansRejected: 0 });
+        expect(summary).toEqual({ plansImported: 2, plansRejected: 0, plansDuplicated: 0 });
         expect(await target.getProfile()).toEqual(profile);
         expect(await target.listPlans()).toEqual(await source.listPlans());
         expect(await target.isSetUp()).toBe(true);
@@ -196,7 +283,7 @@ describe("backup and restore", () => {
         const repo = createRepository(createMemoryStore(), fixedNow);
         const base = { format: "planifikues-kopje", exportedAt: "x", profile };
         await expect(repo.restoreBackup({ ...base, schemaVersion: SCHEMA_VERSION + 1, plans: [] })).rejects.toBeInstanceOf(StorageTooNewError);
-        expect(await repo.restoreBackup({ ...base, schemaVersion: 1, plans: [plan("ok"), { id: "broken" }] })).toEqual({ plansImported: 1, plansRejected: 1 });
+        expect(await repo.restoreBackup({ ...base, schemaVersion: 1, plans: [plan("ok"), { id: "broken" }] })).toEqual({ plansImported: 1, plansRejected: 1, plansDuplicated: 0 });
     });
 
     test("if the restore write fails, the device keeps what it had", async () => {
@@ -281,6 +368,42 @@ describe("converting an old user", () => {
         expect(result.sessionIdsRepaired).toBe(2);
     });
 
+    test("a replacement id never repeats an id already in the plan, even one further down or just handed out", () => {
+        // The generator first offers ids that are taken: one used later in the list, then its own previous answer.
+        const offers = ["z9", "fresh-1", "fresh-1", "fresh-2"];
+        const sessions = [session("a1"), session("a1"), session("a1"), session("z9")];
+        const result = convertLegacyUser(legacyUser({ plans: [plan("p1", undefined, sessions)] }), () => offers.shift() ?? "exhausted", fixedNow);
+
+        const ids = result.plans[0]?.sessions.map((s) => s.id) ?? [];
+        expect(ids).toEqual(["a1", "fresh-1", "fresh-2", "z9"]);
+        expect(new Set(ids).size).toBe(4);
+    });
+
+    test("the same for plan ids", () => {
+        const offers = ["later", "fresh"];
+        const result = convertLegacyUser(legacyUser({ plans: [plan("same"), plan("same"), plan("later")] }), () => offers.shift() ?? "exhausted", fixedNow);
+        expect(result.plans.map((p) => p.id)).toEqual(["same", "fresh", "later"]);
+    });
+
+    test("a generator that cannot produce an unused id stops the conversion instead of storing duplicates", () => {
+        const sessions = [session("a1"), session("a1")];
+        expect(() => convertLegacyUser(legacyUser({ plans: [plan("p1", undefined, sessions)] }), () => "a1", fixedNow)).toThrow("id_generator_keeps_colliding");
+    });
+
+    test("statuses and kinds this app does not know are stored as no progress and counted, not passed off as real", () => {
+        const sessions = [session("s1", "completed"), { ...session("s2"), status: "done" }, { ...session("s3"), status: undefined }, { ...session("s4", "partial"), type: "break" }];
+        const result = convertLegacyUser(legacyUser({ plans: [plan("p1", undefined, sessions)] }), () => "new-id", fixedNow);
+
+        expect(result.plans[0]?.sessions.map((s) => [s.status, s.type])).toEqual([["completed", "learning"], ["pending", "learning"], ["pending", "learning"], ["partial", "learning"]]);
+        expect([result.sessionsWithUnknownStatus, result.sessionsWithUnknownKind]).toEqual([2, 1]);
+    });
+
+    test("unknown values in a plan that is rejected anyway are not counted", () => {
+        const broken = plan("p1", undefined, [{ ...session("s1"), status: "done", startTime: "8" }]);
+        const result = convertLegacyUser(legacyUser({ plans: [broken] }), () => "new-id", fixedNow);
+        expect([result.plans.length, result.sessionsWithUnknownStatus]).toEqual([0, 0]);
+    });
+
     test("a plan that cannot be read is listed by its subject, and the good plans still come over", () => {
         const broken = { ...plan("p2"), subject: "Kimi", startDate: "pa datë" };
         const result = convertLegacyUser(legacyUser({ plans: [plan("p1"), broken, "nonsense", { ...plan("p3"), sessions: [{ ...session("s1"), startTime: "8" }] }] }), () => "new-id", fixedNow);
@@ -317,7 +440,7 @@ describe("migration on first start", () => {
 
         const outcome = await migrateFromLegacy(repo, storage);
 
-        expect(outcome).toEqual({ status: "migrated", plans: 1, rejected: [], sessionIdsRepaired: 0, otherAccounts: 0 });
+        expect(outcome).toEqual({ status: "migrated", plans: 1, rejected: [], sessionIdsRepaired: 0, sessionsWithUnknownStatus: 0, sessionsWithUnknownKind: 0, otherAccounts: 0 });
         expect(await repo.getProfile()).toMatchObject({ id: "legacy-1", name: "Arta Krasniqi" });
         expect((await repo.listPlans()).plans).toEqual([plan("p1")]);
         expect((await repo.readMeta())?.migratedFromLegacyAt).toBe(NOW.toISOString());

@@ -1,4 +1,5 @@
-import type { KeyValueStore, Write } from "./store.ts";
+import { PreconditionFailedError } from "./store.ts";
+import type { CommitOptions, KeyValueStore, Write } from "./store.ts";
 
 const DATABASE = "planifikues";
 const STORE = "kv";
@@ -27,32 +28,66 @@ export function openIndexedDbStore(name: string = DATABASE): Promise<KeyValueSto
                     request.onerror = () => rej(request.error ?? new Error("indexeddb_request_failed"));
                 });
 
+            // "￿" sorts after every character a key can continue with.
+            const withPrefix = (prefix: string) => IDBKeyRange.bound(prefix, prefix + "￿");
+
             resolve({
                 get: (key) => done(db.transaction(STORE, "readonly").objectStore(STORE).get(key)),
 
                 keys: async (prefix) => {
-                    // "￿" sorts after every character a key can continue with.
-                    const range = IDBKeyRange.bound(prefix, prefix + "￿");
-                    const keys = await done(db.transaction(STORE, "readonly").objectStore(STORE).getAllKeys(range));
+                    const keys = await done(db.transaction(STORE, "readonly").objectStore(STORE).getAllKeys(withPrefix(prefix)));
                     return keys.map(String).sort();
                 },
 
-                commit: (writes: Write[]) =>
+                /**
+                 * One readwrite transaction. Readwrite transactions on the same object store run one
+                 * after another, across tabs too, so the checks below and the writes that follow them
+                 * cannot be interleaved with another commit. Requests are issued from inside each
+                 * other's callbacks, which keeps the transaction alive until the last one.
+                 */
+                commit: (writes: Write[], options: CommitOptions = {}) =>
                     new Promise<void>((res, rej) => {
                         const tx = db.transaction(STORE, "readwrite");
-                        tx.oncomplete = () => res();
-                        tx.onerror = () => rej(tx.error ?? new Error("indexeddb_write_failed"));
-                        tx.onabort = () => rej(tx.error ?? new Error("indexeddb_write_aborted"));
                         const store = tx.objectStore(STORE);
-                        try {
-                            for (const w of writes) {
-                                if ("delete" in w) store.delete(w.key);
-                                else store.put(w.value, w.key);
+                        let refusal: Error | null = null;
+
+                        tx.oncomplete = () => res();
+                        tx.onerror = () => rej(refusal ?? tx.error ?? new Error("indexeddb_write_failed"));
+                        tx.onabort = () => rej(refusal ?? tx.error ?? new Error("indexeddb_write_aborted"));
+
+                        const refuse = (error: unknown) => {
+                            refusal = error instanceof Error ? error : new Error(String(error));
+                            try {
+                                tx.abort();
+                            } catch {
+                                /* already finished or aborted */
                             }
-                        } catch (error) {
-                            tx.abort();
-                            rej(error);
-                        }
+                        };
+
+                        const apply = () => {
+                            try {
+                                for (const w of writes) {
+                                    if ("deletePrefix" in w) {
+                                        const listing = store.getAllKeys(withPrefix(w.deletePrefix));
+                                        listing.onsuccess = () => {
+                                            for (const key of listing.result) if (!w.except.includes(String(key))) store.delete(key);
+                                        };
+                                    } else if ("delete" in w) store.delete(w.key);
+                                    else store.put(w.value, w.key);
+                                }
+                            } catch (error) {
+                                refuse(error); // for example a value that cannot be cloned
+                            }
+                        };
+
+                        const mustBeAbsent = [...(options.onlyIfAbsent ?? [])];
+                        const checkNext = () => {
+                            const key = mustBeAbsent.shift();
+                            if (key === undefined) return apply();
+                            const lookup = store.getKey(key);
+                            lookup.onsuccess = () => (lookup.result === undefined ? checkNext() : refuse(new PreconditionFailedError(key)));
+                        };
+                        checkNext();
                     }),
             });
         };

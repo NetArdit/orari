@@ -1,5 +1,6 @@
 import { BackupFile, SCHEMA_VERSION, StoredMeta, StoredPlan, StoredProfile } from "./model.ts";
 import type { SessionStatus } from "./model.ts";
+import { PreconditionFailedError } from "./store.ts";
 import type { KeyValueStore, Write } from "./store.ts";
 
 const META = "meta";
@@ -18,9 +19,19 @@ export interface UnreadablePlan {
     reason: string;
 }
 
+/** Thrown by initialise when this device already has a profile, including one written by another tab a moment ago. */
+export class AlreadySetUpError extends Error {
+    constructor() {
+        super("already_set_up");
+    }
+}
+
 export interface ImportSummary {
     plansImported: number;
+    /** Plans in the file that failed the checks. */
     plansRejected: number;
+    /** Plans in the file whose id had already appeared in it; the first one was kept. */
+    plansDuplicated: number;
 }
 
 /**
@@ -55,14 +66,27 @@ export function createRepository(store: KeyValueStore, now: () => Date = () => n
             return raw === undefined ? null : StoredProfile.parse(raw);
         },
 
-        /** First set-up of this device: profile and any plans, in one write. Refuses if a profile already exists. */
+        /**
+         * First set-up of this device: profile and any plans, in one write. Refuses if a profile already
+         * exists. The "does one exist" check is part of the write itself, so two tabs starting at the same
+         * moment cannot both succeed: the second gets AlreadySetUpError and nothing of its data is stored.
+         */
         async initialise(profile: StoredProfile, plans: StoredPlan[], options: { fromLegacy: boolean }): Promise<void> {
-            if ((await store.get(PROFILE)) !== undefined) throw new Error("already_set_up");
-            await store.commit([
-                { key: META, value: newMeta(options.fromLegacy ? now().toISOString() : null) },
-                { key: PROFILE, value: StoredProfile.parse(profile) },
-                ...planWrites(plans.map((p) => StoredPlan.parse(p))),
-            ]);
+            const validated = plans.map((p) => StoredPlan.parse(p));
+            if (new Set(validated.map((p) => p.id)).size !== validated.length) throw new Error("duplicate_plan_ids");
+            try {
+                await store.commit(
+                    [
+                        { key: META, value: newMeta(options.fromLegacy ? now().toISOString() : null) },
+                        { key: PROFILE, value: StoredProfile.parse(profile) },
+                        ...planWrites(validated),
+                    ],
+                    { onlyIfAbsent: [PROFILE] }
+                );
+            } catch (error) {
+                if (error instanceof PreconditionFailedError) throw new AlreadySetUpError();
+                throw error;
+            }
         },
 
         async saveProfile(profile: StoredProfile): Promise<void> {
@@ -115,30 +139,37 @@ export function createRepository(store: KeyValueStore, now: () => Date = () => n
 
         /**
          * Replaces what is on the device with a backup. The file is checked completely before anything is
-         * touched; plans in it that fail the checks are skipped and counted. The removal of the old plans
-         * and the writing of the new ones are one write.
+         * touched; plans in it that fail the checks, or repeat an id already seen in the file, are skipped
+         * and counted, never merged into one another. Which plans to remove is decided inside the write,
+         * from what is in storage at that moment, so a plan saved by another tab just before the restore
+         * is removed with the rest instead of surviving it by accident.
          */
         async restoreBackup(file: unknown): Promise<ImportSummary> {
             const backup = BackupFile.parse(file);
             if (backup.schemaVersion > SCHEMA_VERSION) throw new StorageTooNewError(backup.schemaVersion);
 
             const plans: StoredPlan[] = [];
+            const ids = new Set<string>();
             let rejected = 0;
+            let duplicated = 0;
             for (const raw of backup.plans) {
                 const parsed = StoredPlan.safeParse(raw);
-                if (parsed.success) plans.push(parsed.data);
-                else rejected++;
+                if (!parsed.success) rejected++;
+                else if (ids.has(parsed.data.id)) duplicated++;
+                else {
+                    ids.add(parsed.data.id);
+                    plans.push(parsed.data);
+                }
             }
 
             const existing = await readMeta();
-            const stale = (await store.keys(PLAN)).filter((key) => !plans.some((p) => PLAN + p.id === key));
             await store.commit([
                 { key: META, value: existing ?? newMeta(null) },
                 { key: PROFILE, value: backup.profile },
-                ...stale.map((key): Write => ({ key, delete: true })),
+                { deletePrefix: PLAN, except: plans.map((p) => PLAN + p.id) },
                 ...planWrites(plans),
             ]);
-            return { plansImported: plans.length, plansRejected: rejected };
+            return { plansImported: plans.length, plansRejected: rejected, plansDuplicated: duplicated };
         },
     };
 }
