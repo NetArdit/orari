@@ -5,6 +5,7 @@
  * Marking a session is shown at once and written afterwards. If the write fails the mark is taken
  * back and the failure is reported, so the screen never claims progress the device did not keep.
  */
+import { uuid } from "../ids.ts";
 import { PlanExistsError } from "../storage/repository.ts";
 import type { Repository, UnreadablePlan } from "../storage/repository.ts";
 import type { SessionStatus, StoredPlan, StoredProfile } from "../storage/model.ts";
@@ -134,7 +135,7 @@ export function createPlanStore(repository: Repository) {
          * If its id is already taken (by a plan here, or one another tab stored a moment ago) the existing plan
          * is left untouched and the new one is stored under another id from `newId`.
          */
-        addPlan(plan: StoredPlan, newId: () => string = () => crypto.randomUUID()): Promise<string | null> {
+        addPlan(plan: StoredPlan, newId: () => string = () => uuid()): Promise<string | null> {
             return enqueue("\u0000new", async () => {
                 let candidate = plan;
                 for (let attempt = 0; attempt < 5; attempt++) {

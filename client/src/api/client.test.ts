@@ -177,6 +177,33 @@ describe("failures are sorted into kinds the screens can act on", () => {
         expect(own.calls).toHaveLength(1);
     }, 20_000);
 
+    test("works in a browser without AbortSignal.any and AbortSignal.timeout (older phones), with a caller's cancel and a time limit", async () => {
+        const original = { any: AbortSignal.any, timeout: AbortSignal.timeout };
+        (AbortSignal as unknown as Record<string, unknown>).any = undefined;
+        (AbortSignal as unknown as Record<string, unknown>).timeout = undefined;
+        try {
+            const parsed = { startDate: null, endDate: null, subject: "JS", materialAmount: null, goal: null, planMode: null, weeklyAvailability: [], commitments: [], sessionPreferenceMinutes: null, energy: null, difficulty: null, clarifyingQuestions: [] };
+            const { fetchFn } = fakeFetch(() => json(200, { parsed }));
+            const api = createApiClient({ fetch: fetchFn });
+            const controller = new AbortController();
+            const ok = await api.parse({ text: "abc", clientDate: "2026-10-14", timeZone: "UTC" }, { signal: controller.signal });
+            expect(ok.ok).toBe(true);
+
+            const stalled = createApiClient({ fetch: ((_url: string, init: RequestInit) => new Promise((_resolve, reject) => init.signal?.addEventListener("abort", () => reject(new Error("aborted"))))) as unknown as typeof fetch, timeoutMs: 30, aiTimeoutMs: 30 });
+            const slow = await stalled.parse({ text: "abc", clientDate: "2026-10-14", timeZone: "UTC" });
+            expect(slow.ok === false && slow.kind).toBe("timeout");
+
+            const cancel = new AbortController();
+            const pending = stalled.parse({ text: "abc", clientDate: "2026-10-14", timeZone: "UTC" }, { signal: cancel.signal });
+            cancel.abort();
+            const cancelled = await pending;
+            expect(cancelled.ok === false && cancelled.kind).toBe("aborted");
+        } finally {
+            (AbortSignal as unknown as Record<string, unknown>).any = original.any;
+            (AbortSignal as unknown as Record<string, unknown>).timeout = original.timeout;
+        }
+    });
+
     test("no connection is offline, in Albanian", async () => {
         const { fetchFn } = fakeFetch(() => {
             throw new TypeError("Failed to fetch");

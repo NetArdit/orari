@@ -1,3 +1,4 @@
+import { uuid } from "../ids.ts";
 import type {
     AccountSession,
     AccountUser,
@@ -200,7 +201,7 @@ export function createApiClient({
     aiTimeoutMs = 85_000,
     timeoutMs = 10_000,
     pollMs = 1_500,
-    newKey = () => crypto.randomUUID(),
+    newKey = () => uuid(),
 }: ApiClientOptions = {}) {
     async function request<T>(
         method: "GET" | "POST",
@@ -214,8 +215,23 @@ export function createApiClient({
 
         if (options.signal?.aborted) return failure("aborted");
 
-        const timeout = AbortSignal.timeout(limitMs);
-        const signal = options.signal ? AbortSignal.any([options.signal, timeout]) : timeout;
+        // One signal that ends on the caller's cancel or on the time limit. AbortSignal.any and AbortSignal.timeout are
+        // not available in older phone browsers (Safari before 17.4, older Android WebViews); building it by hand
+        // keeps every request working there.
+        const controller = new AbortController();
+        let timedOut = false;
+        const timer = setTimeout(() => {
+            timedOut = true;
+            controller.abort();
+        }, limitMs);
+        const onCallerAbort = () => controller.abort();
+        options.signal?.addEventListener("abort", onCallerAbort, { once: true });
+        const signal = controller.signal;
+        const release = () => {
+            clearTimeout(timer);
+            options.signal?.removeEventListener("abort", onCallerAbort);
+        };
+        const timeout = { get aborted() { return timedOut; } };
 
         let response: Response;
         try {
@@ -225,6 +241,7 @@ export function createApiClient({
                 ...(method === "POST" ? { headers: { "Content-Type": "application/json", ...extraHeaders }, body: JSON.stringify(body) } : {}),
             });
         } catch {
+            release();
             if (options.signal?.aborted) return failure("aborted");
             if (timeout.aborted) return failure("timeout");
             return failure("offline");
@@ -234,11 +251,13 @@ export function createApiClient({
         try {
             payload = await response.json();
         } catch {
+            release();
             if (options.signal?.aborted) return failure("aborted");
             if (timeout.aborted) return failure("timeout");
             // Not JSON: a proxy's error page, or a connection cut half-way.
             return failure(response.ok ? "server" : kindForStatus(response.status), { status: response.status });
         }
+        release();
 
         if (response.ok) return { ok: true, data: payload as T };
 

@@ -6,6 +6,7 @@
  * What is not: the password and the e-mail address. There is no account any more; the data stays on
  * this device. The old keys are only read here, never changed or removed; that happens at cutover.
  */
+import { uuid } from "../ids.ts";
 import { SESSION_KINDS, SESSION_STATUSES, StoredPlan, StoredProfile } from "./model.ts";
 import { AlreadySetUpError } from "./repository.ts";
 import type { Repository } from "./repository.ts";
@@ -83,7 +84,7 @@ export function readLegacy(storage: ReadableStorage): LegacyRead {
 }
 
 /** One old user to a profile and plans. Pure: no storage, no clock except for missing dates. */
-export function convertLegacyUser(user: Record<string, unknown>, newId: () => string = () => crypto.randomUUID(), now: () => Date = () => new Date()): LegacyConversion {
+export function convertLegacyUser(user: Record<string, unknown>, newId: () => string = () => uuid(), now: () => Date = () => new Date()): LegacyConversion {
     const text = (value: unknown, max: number) => (typeof value === "string" ? value.trim().slice(0, max) : "");
 
     const profile = StoredProfile.parse({

@@ -2,6 +2,7 @@
  * Adjusting a plan after falling behind: what is told to the server, and how its answer is joined
  * with what the person has already done.
  */
+import { uuid } from "../ids.ts";
 import { byTime, minutesOf, timeOf } from "./clock.ts";
 import type { Clock } from "./clock.ts";
 import { sessionState } from "./progress.ts";
@@ -56,7 +57,7 @@ export interface ReplanResult {
  *  - The plan's id, creation time and inputs stay; strategy, explanations and warnings become the new ones.
  * A new session whose id is already in the plan is given a different one rather than trusted to be unique.
  */
-export function mergeReplan(plan: StoredPlan, answer: Pick<PlanAnswer, "sessions" | "strategy" | "explanations" | "warnings">, clock: Clock, newId: () => string = () => crypto.randomUUID()): ReplanResult {
+export function mergeReplan(plan: StoredPlan, answer: Pick<PlanAnswer, "sessions" | "strategy" | "explanations" | "warnings">, clock: Clock, newId: () => string = () => uuid()): ReplanResult {
     const kept = plan.sessions.filter((s) => s.date < clock.today || s.status !== "pending");
     const ids = new Set(kept.map((s) => s.id));
 
@@ -87,7 +88,7 @@ export function mergeReplan(plan: StoredPlan, answer: Pick<PlanAnswer, "sessions
 }
 
 /** A new plan in storage form from the server's answer and the inputs it was made from. */
-export function planFromAnswer(answer: PlanAnswer, structured: Record<string, unknown>, now: Date, newId: () => string = () => crypto.randomUUID()): StoredPlan {
+export function planFromAnswer(answer: PlanAnswer, structured: Record<string, unknown>, now: Date, newId: () => string = () => uuid()): StoredPlan {
     const ids = new Set<string>();
     const sessions: StoredSession[] = answer.sessions.map((s) => {
         let id = s.id;
