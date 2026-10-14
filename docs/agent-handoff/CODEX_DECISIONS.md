@@ -101,3 +101,12 @@ Supersedes: "local profile without password", "owner selects one of two visual d
 - Design: the in-app evidence pass comes first (free account at phone width, dated captures; public walkthrough videos and official help pages as labelled secondary evidence). "Blloqe" accepted as the provisional label for `blocks`; labels reviewable after the directions are revised.
 - Compromised passwords: Have I Been Pwned range API, SHA-1 computed locally, first five characters only, once after entry, disclosed, no logging of the prefix or range, honest behaviour when the check is unavailable.
 - Batch 7 authorised: evidence pass and revised paired directions; planner screens and both layout settings; the settings contract on existing client storage; model configuration; a narrow accounts repository interface with an in-memory implementation. Excluded: host choice or deployment, PostgreSQL driver and migrations, account routes and authentication, real e-mail, compliance claims, credentials, paid dependencies, push, publishing, reading .env.
+
+## 2026-10-14 — owner answers to the Batch 6 questions (recorded by Claude from the owner's message; not a Codex ruling)
+
+- Audience: university and faculty students, or anyone aged 16 or over. Starts in Kosovo.
+- Intent: a portfolio project now, to be kept ready to be developed into a product and published after the owner is employed.
+- Hosting: no preference; any free option may be used.
+- Brevo: the owner has not read the plan details; from memory the free plan is up to 300 e-mails a day (UNVERIFIED, owner's recollection). The owner asks Codex to research it.
+- AI: the owner understood that the failures might be the model and offered to look for one; Claude has the key and can read OpenRouter's public list of free models itself. The 429s on 2026-10-14 were refusals by the upstream provider, not a missing key; one parse call succeeded in 17.1 s on google/gemma-4-31b-it:free.
+- Consequences to be ruled on by Codex: an audience of 16 and over meets the Article 7 threshold for independent consent, with age still to be declared and checked at sign-up; "portfolio now, product later" means the host must be chosen so that moving to a commercial plan later is cheap (Vercel Hobby is non-commercial only); the Brevo limits still have to be read from a source.

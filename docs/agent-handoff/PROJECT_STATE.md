@@ -53,7 +53,8 @@ P0-2 plaintext passwords and fake login (goes with the local-profile redesign); 
 
 ## Open with the owner
 - Product rules: whether a partly done session counts toward the streak; whether a late session gets a one-tap "move to later today"; whether skipped sessions should prompt re-planning.
-- For accounts, when the work reaches them: a database connection (the owner creates it and enters it in `.env` themselves), an e-mail sending key and sender address for password reset, and where the app is to be hosted.
+- Answered 2026-10-14: audience is university students or anyone 16 and over, starting in Kosovo; a portfolio project now, to be ready to become a published product later; no hosting preference (any free option); Brevo free plan believed to be up to 300 e-mails a day (unverified; Codex to research).
+- Still needed when accounts work reaches them: a database connection (the owner creates it and enters it in `.env` themselves), an e-mail sending key and sender for password reset.
 
 ## Blockers
 - Hosting facts are unknown: whether any free host can hold a 75-second AI request, or plan generation must become a job that is polled.
