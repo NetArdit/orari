@@ -526,7 +526,12 @@ document.getElementById("parseButton").addEventListener("click", async () => {
         const response = await fetch("/api/parse", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ text })
+            body: JSON.stringify({
+                text,
+                // "Today" and "tomorrow" must mean the user's day, not the server's.
+                clientDate: todayStr(),
+                timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone
+            })
         });
 
         const result = await response.json();
@@ -1021,7 +1026,11 @@ function renderPlanHealth(plans, today) {
 document.getElementById("adjustPlanButton").addEventListener("click", async () => {
 
     const planId = document.getElementById("planHealthPanel").dataset.planId;
-    const plan = findPlan(planId);
+
+    // The plan must be the one inside the user object that gets saved below.
+    // Looking it up separately gives a second copy, and changes to it are lost.
+    const user = getCurrentUser();
+    const plan = (user?.plans || []).find(p => p.id === planId);
     if (!plan) return;
 
     const button = document.getElementById("adjustPlanButton");
@@ -1030,7 +1039,6 @@ document.getElementById("adjustPlanButton").addEventListener("click", async () =
     button.textContent = "Duke rregulluar...";
 
     const today = todayStr();
-    const user = getCurrentUser();
 
     const completedSessionSummaries = plan.sessions
         .filter(s => s.status === "completed" || s.status === "partial")
@@ -1050,6 +1058,8 @@ document.getElementById("adjustPlanButton").addEventListener("click", async () =
                 structured: plan.structured,
                 progress: {
                     today,
+                    // Only the rest of today is free: without this, new sessions could be placed in hours already gone.
+                    now: new Date().toTimeString().slice(0, 5),
                     completedSessionSummaries,
                     missedSessionSummaries,
                     remainingMaterialNote: null
@@ -1061,11 +1071,13 @@ document.getElementById("adjustPlanButton").addEventListener("click", async () =
 
         if (!response.ok) throw new Error(result.error || "Ndodhi një gabim.");
 
-        // Keep history (past sessions), replace everything from today onward.
-        const pastSessions = plan.sessions.filter(s => s.date < today);
+        // Keep the past, and keep every session the user has already marked
+        // (done, partly done, skipped) whatever its date. Only sessions still
+        // pending from today onward are replaced by the new ones.
+        const keptSessions = plan.sessions.filter(s => s.date < today || s.status !== "pending");
         const newSessions = result.sessions.map(s => ({ ...s, status: "pending" }));
 
-        plan.sessions = [...pastSessions, ...newSessions];
+        plan.sessions = [...keptSessions, ...newSessions];
         plan.strategy = result.strategy;
         plan.explanations = result.explanations;
         plan.warnings = result.warnings;

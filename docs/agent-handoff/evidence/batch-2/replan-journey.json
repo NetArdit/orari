@@ -1,0 +1,198 @@
+{
+  "base": "http://127.0.0.1:3987",
+  "startedAt": "2026-10-14T14:09:04.019Z",
+  "browser": "Edg/155.0.4283.45",
+  "today": "2026-10-14",
+  "checks": [
+    {
+      "name": "the plan-health panel offers the re-plan",
+      "pass": true
+    },
+    {
+      "name": "the request tells the server today's date",
+      "pass": true,
+      "detail": {
+        "today": "2026-10-14",
+        "now": "16:09",
+        "completedSessionSummaries": [
+          "2026-10-12 KEEP past completed (completed)",
+          "2026-10-14 KEEP today completed (completed)",
+          "2026-10-14 KEEP today partial (partial)",
+          "2026-10-17 KEEP future completed (completed)"
+        ],
+        "missedSessionSummaries": [
+          "2026-10-13 KEEP past missed",
+          "2026-10-14 KEEP today skipped"
+        ],
+        "remainingMaterialNote": null
+      }
+    },
+    {
+      "name": "the request tells the server the time of day, so today is planned only from now on",
+      "pass": true,
+      "detail": {
+        "sent": "16:09",
+        "pageNow": "16:09"
+      }
+    },
+    {
+      "name": "exactly the completed and partial sessions are reported as done, each with its date, title and status",
+      "pass": true,
+      "detail": {
+        "sent": [
+          "2026-10-12 KEEP past completed (completed)",
+          "2026-10-14 KEEP today completed (completed)",
+          "2026-10-14 KEEP today partial (partial)",
+          "2026-10-17 KEEP future completed (completed)"
+        ],
+        "expected": [
+          "2026-10-12 KEEP past completed (completed)",
+          "2026-10-14 KEEP today completed (completed)",
+          "2026-10-14 KEEP today partial (partial)",
+          "2026-10-17 KEEP future completed (completed)"
+        ]
+      }
+    },
+    {
+      "name": "exactly the overdue and skipped sessions are reported as missed, each with its date and title",
+      "pass": true,
+      "detail": {
+        "sent": [
+          "2026-10-13 KEEP past missed",
+          "2026-10-14 KEEP today skipped"
+        ],
+        "expected": [
+          "2026-10-13 KEEP past missed",
+          "2026-10-14 KEEP today skipped"
+        ]
+      }
+    },
+    {
+      "name": "the request carries the plan's own inputs unchanged",
+      "pass": true,
+      "detail": {
+        "startDate": "2026-10-12",
+        "endDate": "2026-10-19",
+        "subject": "Matematikë",
+        "materialAmount": null,
+        "goal": null,
+        "planMode": "exam",
+        "weeklyAvailability": [],
+        "commitments": [],
+        "unavailableDates": [],
+        "sessionPreferenceMinutes": 60,
+        "energy": null,
+        "difficulty": "medium"
+      }
+    },
+    {
+      "name": "P0-1: every session already acted on is kept, including today's; pending ones from today on are replaced",
+      "pass": true,
+      "detail": {
+        "stored": [
+          "KEEP future completed",
+          "KEEP past completed",
+          "KEEP past missed",
+          "KEEP today completed",
+          "KEEP today partial",
+          "KEEP today skipped",
+          "NEW today",
+          "NEW tomorrow"
+        ],
+        "expected": [
+          "KEEP future completed",
+          "KEEP past completed",
+          "KEEP past missed",
+          "KEEP today completed",
+          "KEEP today partial",
+          "KEEP today skipped",
+          "NEW today",
+          "NEW tomorrow"
+        ]
+      }
+    },
+    {
+      "name": "P0-1: today's completed, partial and skipped sessions keep their status",
+      "pass": true,
+      "detail": [
+        {
+          "id": "old-3",
+          "status": "completed",
+          "title": "KEEP today completed",
+          "date": "2026-10-14"
+        },
+        {
+          "id": "old-4",
+          "status": "partial",
+          "title": "KEEP today partial",
+          "date": "2026-10-14"
+        },
+        {
+          "id": "old-5",
+          "status": "skipped",
+          "title": "KEEP today skipped",
+          "date": "2026-10-14"
+        },
+        {
+          "id": "11111111-1111-4111-8111-111111111111",
+          "status": "pending",
+          "title": "NEW today",
+          "date": "2026-10-14"
+        }
+      ]
+    },
+    {
+      "name": "no session id appears twice",
+      "pass": true,
+      "detail": [
+        "old-1",
+        "old-2",
+        "old-3",
+        "old-4",
+        "old-5",
+        "old-8",
+        "11111111-1111-4111-8111-111111111111",
+        "22222222-2222-4222-8222-222222222222"
+      ]
+    },
+    {
+      "name": "the new sessions are stored as pending",
+      "pass": true
+    },
+    {
+      "name": "the plan's strategy is the new one",
+      "pass": true,
+      "detail": "E reja"
+    },
+    {
+      "name": "both storage keys hold the same plans",
+      "pass": true
+    },
+    {
+      "name": "the new session is shown in the plan and can be ticked",
+      "pass": true
+    },
+    {
+      "name": "ticking it changes that session only",
+      "pass": true,
+      "detail": [
+        "NEW tomorrow"
+      ]
+    },
+    {
+      "name": "P1-13: the parse request carries the user's date and time zone",
+      "pass": true,
+      "detail": {
+        "text": "nesër kam provim",
+        "clientDate": "2026-10-14",
+        "timeZone": "Europe/Budapest"
+      }
+    },
+    {
+      "name": "no errors in the browser console",
+      "pass": true,
+      "detail": []
+    }
+  ],
+  "consoleErrors": []
+}

@@ -1,0 +1,82 @@
+{
+  "purpose": "Batch 6: two bounded live calls to learn real latency and whether the app's prompts and validation work against a real free model.",
+  "model": "google/gemma-4-31b-it:free",
+  "providerRequestsMade": 2,
+  "calls": [
+    {
+      "call": "parse",
+      "endpoint": "POST https://openrouter.ai/api/v1/chat/completions",
+      "model": "google/gemma-4-31b-it:free",
+      "startedAtUtc": "2026-10-14T13:44:58.265Z",
+      "jsonMode": true,
+      "elapsedMs": 17084,
+      "httpStatus": 200,
+      "servedBy": {
+        "model": "google/gemma-4-31b-it:free",
+        "provider": "Google AI Studio"
+      },
+      "usage": {
+        "prompt_tokens": 1061,
+        "completion_tokens": 519,
+        "total_tokens": 1580,
+        "cost": 0,
+        "is_byok": false,
+        "prompt_tokens_details": {
+          "cached_tokens": 0,
+          "cache_write_tokens": 0,
+          "audio_tokens": 0,
+          "video_tokens": 0
+        },
+        "cost_details": {
+          "upstream_inference_cost": 0,
+          "upstream_inference_prompt_cost": 0,
+          "upstream_inference_completions_cost": 0
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 0,
+          "image_tokens": 0,
+          "audio_tokens": 0
+        }
+      },
+      "finishReason": "stop",
+      "answerChars": 1315
+    },
+    {
+      "call": "plan",
+      "endpoint": "POST https://openrouter.ai/api/v1/chat/completions",
+      "model": "google/gemma-4-31b-it:free",
+      "startedAtUtc": "2026-10-14T13:45:15.572Z",
+      "jsonMode": true,
+      "elapsedMs": 257,
+      "httpStatus": 429,
+      "error": "429 Provider returned error"
+    }
+  ],
+  "parse": {
+    "inputSummary": "Synthetic, 3 sentences in Kosovo Albanian: subject, date range, daily free window, Sundays off. Today given as 2026-10-14.",
+    "acceptedByAppValidation": true,
+    "extracted": {
+      "startDate": "2026-10-15",
+      "endDate": "2026-10-28",
+      "subject": "Biologji",
+      "materialAmount": "kapitujt 1 deri në 3",
+      "planMode": "exam",
+      "availabilityDays": [
+        "mon:17:00-19:00",
+        "tue:17:00-19:00",
+        "wed:17:00-19:00",
+        "thu:17:00-19:00",
+        "fri:17:00-19:00",
+        "sat:17:00-19:00",
+        "sun:off"
+      ],
+      "commitments": 0,
+      "questions": []
+    }
+  },
+  "plan": {
+    "inputSummary": "Synthetic: Biologji, exam, 3 days (2026-10-14 to 16), one free window 17:00-19:00 per day, preferred session 60 minutes.",
+    "acceptedByAppValidation": false,
+    "failure": "second request refused by the test"
+  }
+}

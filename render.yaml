@@ -1,0 +1,35 @@
+# Render Blueprint: one Node web service. The database is Neon (or Supabase) and is created there; its
+# connection string goes into DATABASE_URL. Secrets are not stored in this file (sync: false = asked for in the dashboard).
+services:
+  - type: web
+    name: orari
+    runtime: node
+    plan: free        # cost 0. It sleeps after 15 minutes idle (first request ~50 s): keep it awake with a free uptime pinger on /api/health, and open the site a few minutes before a presentation
+    buildCommand: npm ci --include=dev && npm run client:build
+    startCommand: node server.js
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_VERSION
+        value: "24"
+      - key: NODE_ENV
+        value: production
+      - key: ACCOUNTS_MODE
+        value: postgres
+      - key: TRUST_PROXY
+        value: "1"
+      - key: DATABASE_URL
+        sync: false
+      - key: ORARI_BASE_URL     # the public https address of this service, e.g. https://orari.onrender.com
+        sync: false
+      - key: OUTBOX_SECRET      # seals the links of queued e-mails in the database; losing it only drops mail that waits
+        generateValue: true
+      - key: SMTP_URL          # smtps://user:password@smtp.provider.com:465
+        sync: false
+      - key: MAIL_FROM          # Orari <no-reply@your-domain>
+        sync: false
+      - key: AI_PROVIDER
+        value: groq
+      - key: GROQ_API_KEY
+        sync: false
+      - key: GROQ_MODELS
+        value: openai/gpt-oss-120b

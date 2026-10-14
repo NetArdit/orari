@@ -1,0 +1,98 @@
+{
+  "purpose": "Batch 10: two bounded live calls to learn real latency and whether the app's prompts and validation work against a real free model.",
+  "model": "openai/gpt-oss-120b",
+  "providerRequestsMade": 2,
+  "calls": [
+    {
+      "call": "parse",
+      "endpoint": "POST https://api.groq.com/openai/v1/chat/completions",
+      "model": "openai/gpt-oss-120b",
+      "startedAtUtc": "2026-10-14T16:30:25.850Z",
+      "jsonMode": true,
+      "elapsedMs": 3157,
+      "httpStatus": 200,
+      "servedBy": {
+        "model": "openai/gpt-oss-120b",
+        "provider": null
+      },
+      "usage": {
+        "queue_time": 0.382198105,
+        "prompt_tokens": 1075,
+        "prompt_time": 0.061623542,
+        "completion_tokens": 985,
+        "completion_time": 2.053279847,
+        "total_tokens": 2060,
+        "total_time": 2.114903389,
+        "completion_tokens_details": {
+          "reasoning_tokens": 735
+        }
+      },
+      "finishReason": "stop",
+      "answerChars": 731
+    },
+    {
+      "call": "plan",
+      "endpoint": "POST https://api.groq.com/openai/v1/chat/completions",
+      "model": "openai/gpt-oss-120b",
+      "startedAtUtc": "2026-10-14T16:30:29.026Z",
+      "jsonMode": true,
+      "elapsedMs": 3811,
+      "httpStatus": 200,
+      "servedBy": {
+        "model": "openai/gpt-oss-120b",
+        "provider": null
+      },
+      "usage": {
+        "queue_time": 0.4711525,
+        "prompt_tokens": 849,
+        "prompt_time": 0.07714268,
+        "completion_tokens": 1629,
+        "completion_time": 3.419136582,
+        "total_tokens": 2478,
+        "total_time": 3.496279262,
+        "completion_tokens_details": {
+          "reasoning_tokens": 592
+        }
+      },
+      "finishReason": "stop",
+      "answerChars": 2964
+    }
+  ],
+  "parse": {
+    "inputSummary": "Synthetic, 3 sentences in Kosovo Albanian: subject, date range, daily free window, Sundays off. Today given as 2026-10-14.",
+    "acceptedByAppValidation": true,
+    "extracted": {
+      "startDate": "2026-10-15",
+      "endDate": "2026-10-28",
+      "subject": "Biologji",
+      "materialAmount": "kapitujt 1 deri në 3",
+      "planMode": "exam",
+      "availabilityDays": [
+        "mon:17:00-19:00",
+        "tue:17:00-19:00",
+        "wed:17:00-19:00",
+        "thu:17:00-19:00",
+        "fri:17:00-19:00",
+        "sat:17:00-19:00",
+        "sun:off"
+      ],
+      "commitments": 0,
+      "questions": []
+    }
+  },
+  "plan": {
+    "inputSummary": "Synthetic: Biologji, exam, 3 days (2026-10-14 to 16), one free window 17:00-19:00 per day, preferred session 60 minutes.",
+    "acceptedByAppValidation": true,
+    "sessions": [
+      "2026-10-14 17:00-18:00 learning: Kapitulli 1 – Konceptet kryesore",
+      "2026-10-14 18:00-19:00 recall: Kapitulli 1 – Kujtimi aktiv",
+      "2026-10-15 17:00-18:00 learning: Kapitulli 2 – Konceptet kryesore",
+      "2026-10-15 18:00-19:00 recall: Kapitulli 1‑2 – Kujtimi i kombinuar",
+      "2026-10-16 17:00-18:00 learning: Kapitulli 3 – Konceptet kryesore",
+      "2026-10-16 18:00-19:00 revision: Përmbledhje dhe praktikë për provimin"
+    ],
+    "strategyChars": 483,
+    "explanations": 3,
+    "warnings": []
+  }
+}

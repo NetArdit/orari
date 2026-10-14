@@ -1,1 +1,7 @@
-.env 
+node_modules/
+.env
+.env.*
+!.env.example
+e2e/results/
+client/dist/
+dev-mail/

@@ -1,0 +1,27 @@
+{
+  "purpose": "Batch 6: two bounded live calls to learn real latency and whether the app's prompts and validation work against a real free model.",
+  "model": "google/gemma-4-31b-it:free",
+  "providerRequestsMade": 1,
+  "calls": [
+    {
+      "call": "plan",
+      "endpoint": "POST https://openrouter.ai/api/v1/chat/completions",
+      "model": "google/gemma-4-31b-it:free",
+      "startedAtUtc": "2026-10-14T14:35:10.274Z",
+      "jsonMode": true,
+      "elapsedMs": 961,
+      "httpStatus": 429,
+      "error": "429 Provider returned error"
+    }
+  ],
+  "parse": {
+    "inputSummary": "Synthetic, 3 sentences in Kosovo Albanian: subject, date range, daily free window, Sundays off. Today given as 2026-10-14.",
+    "acceptedByAppValidation": false,
+    "failure": "not attempted (plan-only run)"
+  },
+  "plan": {
+    "inputSummary": "Synthetic: Biologji, exam, 3 days (2026-10-14 to 16), one free window 17:00-19:00 per day, preferred session 60 minutes.",
+    "acceptedByAppValidation": false,
+    "failure": "second request refused by the test"
+  }
+}
