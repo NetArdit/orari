@@ -104,6 +104,11 @@ describe("failures are sorted into kinds the screens can act on", () => {
             PROVIDER_RATE_LIMITED: "provider_unavailable", PROVIDER_UNAVAILABLE: "provider_unavailable", AI_TIMEOUT: "timeout",
             AI_REJECTED_REQUEST: "ai_failed", AI_UNUSABLE_ANSWER: "ai_failed", AI_NO_USABLE_SESSIONS: "ai_failed", AI_FAILED: "ai_failed",
             NOT_FOUND: "server", INTERNAL: "server",
+            UNAUTHENTICATED: "unauthenticated", INVALID_CREDENTIALS: "invalid_credentials", FORBIDDEN_ORIGIN: "forbidden", EMAIL_NOT_VERIFIED: "unverified",
+            EMAIL_INVALID: "validation", NAME_INVALID: "validation", AGE_NOT_CONFIRMED: "validation", PASSWORD_TOO_SHORT: "validation", PASSWORD_TOO_LONG: "validation",
+            PASSWORD_INVALID: "validation", PASSWORD_COMPROMISED: "validation", PASSWORD_CHECK_UNAVAILABLE: "busy", TOKEN_INVALID: "validation",
+            TOO_MANY_ATTEMPTS: "rate_limited", REVISION_CONFLICT: "conflict", MARK_CONFLICT: "conflict", PLAN_EXISTS: "conflict", PLAN_LIMIT: "validation",
+            OPERATION_INVALID: "validation", STATUS_INVALID: "validation", BUSY: "busy",
         };
         expect([...ERROR_CODES].sort()).toEqual(Object.keys(expected).sort());
         for (const code of ERROR_CODES) {

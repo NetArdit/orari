@@ -12,6 +12,12 @@ export type Route =
     | { name: "plan"; planId: string }
     | { name: "session"; planId: string; sessionId: string }
     | { name: "me" }
+    | { name: "signIn" }
+    | { name: "signUp" }
+    | { name: "forgot" }
+    /** Reached from the link in an e-mail: /app/reset#token=... The token is in the fragment and is read by the page, never sent in the address. */
+    | { name: "reset" }
+    | { name: "verify" }
     | { name: "notFound"; path: string };
 
 const decode = (part: string): string | null => {
@@ -37,6 +43,12 @@ export function parsePath(pathname: string): Route {
     if (first === "orari" && second === undefined) return { name: "week" };
     if (first === "plan-i-ri" && second === undefined) return { name: "newPlan" };
     if (first === "une" && second === undefined) return { name: "me" };
+    if (first === "hyr" && second === undefined) return { name: "signIn" };
+    if (first === "regjistrohu" && second === undefined) return { name: "signUp" };
+    if (first === "harrova" && second === undefined) return { name: "forgot" };
+    // These two paths are the ones the server puts in e-mails (lib/accounts/service.js); keep them in step.
+    if (first === "reset" && second === undefined) return { name: "reset" };
+    if (first === "verify" && second === undefined) return { name: "verify" };
     if (first === "planet") {
         if (second === undefined) return { name: "plans" };
         if (third === undefined) return { name: "plan", planId: second };
@@ -63,6 +75,16 @@ export function hrefFor(route: Exclude<Route, { name: "notFound" }>): string {
             return `${BASE}/planet/${id(route.planId)}/seanca/${id(route.sessionId)}`;
         case "me":
             return BASE + "/une";
+        case "signIn":
+            return BASE + "/hyr";
+        case "signUp":
+            return BASE + "/regjistrohu";
+        case "forgot":
+            return BASE + "/harrova";
+        case "reset":
+            return BASE + "/reset";
+        case "verify":
+            return BASE + "/verify";
     }
 }
 

@@ -5,6 +5,7 @@ import type { Services } from "./app/services.tsx";
 import { hrefFor } from "./router/routes.ts";
 import type { Route } from "./router/routes.ts";
 import { handleLinkClick, useRoute } from "./router/useRoute.ts";
+import { ForgotScreen, ResetScreen, SignInScreen, SignUpScreen, VerifyScreen } from "./screens/AccountScreens.tsx";
 import { NewPlanScreen } from "./screens/NewPlanScreen.tsx";
 import { PlanScreen, PlansScreen, SessionScreen } from "./screens/PlansScreens.tsx";
 import { SettingsScreen } from "./screens/SettingsScreen.tsx";
@@ -13,6 +14,7 @@ import { TodayScreen } from "./screens/TodayScreen.tsx";
 import { WeekScreen } from "./screens/WeekScreen.tsx";
 import { applyAppearance, parseAppearance, readCachedAppearance, writeCachedAppearance } from "./settings/appearance.ts";
 import type { Appearance } from "./settings/appearance.ts";
+import { createAccountStore } from "./state/accountStore.ts";
 import { createPlanStore } from "./state/planStore.ts";
 import { openIndexedDbStore } from "./storage/idb.ts";
 import { migrateFromLegacy } from "./storage/legacy.ts";
@@ -28,12 +30,15 @@ async function boot(): Promise<Boot> {
     const migration = await migrateFromLegacy(repository, window.localStorage);
     const store = createPlanStore(repository);
     await store.load();
+    // Who is signed in is asked of the server in the background: the planner does not wait for it.
+    const account = createAccountStore(api);
+    void account.load();
     const health = await api.health();
     const state = store.getState();
     const stored = await repository.getAppearance();
     return {
         state: "ready",
-        services: { api, repository, store },
+        services: { api, repository, store, account },
         device: {
             migration,
             profileName: state.status === "ready" ? (state.profile?.name ?? null) : null,
@@ -53,7 +58,11 @@ const NAV: { route: Exclude<Route, { name: "notFound" }>; label: string; match: 
     { route: { name: "me" }, label: "Cilësimet", match: ["me"] },
 ];
 
-const TITLES: Record<Route["name"], string> = { today: "Sot", week: "Orari i javës", newPlan: "Plan i ri", plans: "Planet", plan: "Plani", session: "Seanca", me: "Cilësimet", notFound: "Kjo faqe nuk ekziston" };
+const TITLES: Record<Route["name"], string> = {
+    today: "Sot", week: "Orari i javës", newPlan: "Plan i ri", plans: "Planet", plan: "Plani", session: "Seanca", me: "Cilësimet",
+    signIn: "Hyr", signUp: "Regjistrohu", forgot: "Fjalëkalim i harruar", reset: "Fjalëkalim i ri", verify: "Konfirmo email-in",
+    notFound: "Kjo faqe nuk ekziston",
+};
 
 function Screen({ route, device }: { route: Route; device: DeviceInfo }) {
     const state = useStoreState();
@@ -85,6 +94,16 @@ function ScreenFor({ route, device, planCount }: { route: Route; device: DeviceI
             return <SessionScreen planId={route.planId} sessionId={route.sessionId} />;
         case "me":
             return <SettingsScreen device={device} planCount={planCount} />;
+        case "signIn":
+            return <SignInScreen />;
+        case "signUp":
+            return <SignUpScreen />;
+        case "forgot":
+            return <ForgotScreen />;
+        case "reset":
+            return <ResetScreen />;
+        case "verify":
+            return <VerifyScreen />;
         case "notFound":
             return (
                 <Empty title="Kjo faqe nuk ekziston">

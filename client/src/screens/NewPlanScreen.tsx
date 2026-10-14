@@ -1,12 +1,12 @@
-import { useEffect, useId, useMemo, useState } from "react";
-import type { ReactNode } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { createParseFlow, createPlanFlow } from "../state/flows.ts";
 import { clockFrom } from "../domain/clock.ts";
 import { emptyPlanForm, errorsAt, LIMITS, WEEKDAYS } from "../domain/planForm.ts";
 import type { CommitmentDraft, CommitmentKind, Difficulty, Energy, PlanFormState, PlanMode, Weekday } from "../domain/planForm.ts";
 import { navigate } from "../router/useRoute.ts";
 import { useFlow, useServices, useStoreState } from "../app/services.tsx";
-import { Button, Notice, ScreenTitle } from "../ui/primitives.tsx";
+import { Field, INPUT } from "../ui/forms.tsx";
+import { Button, buttonClass, Link, Notice, ScreenTitle } from "../ui/primitives.tsx";
 import type { FieldError } from "../api/types.ts";
 
 const WEEKDAY_NAMES: Record<Weekday, string> = { mon: "E hënë", tue: "E martë", wed: "E mërkurë", thu: "E enjte", fri: "E premte", sat: "E shtunë", sun: "E diel" };
@@ -15,31 +15,6 @@ const MODES: [PlanMode, string][] = [["general", "I përgjithshëm"], ["exam", "
 const DIFFICULTIES: [Difficulty, string][] = [["easy", "E lehtë"], ["medium", "Mesatare"], ["hard", "E vështirë"]];
 const COMMITMENT_KINDS: [CommitmentKind, string][] = [["work", "Punë"], ["school", "Shkollë"], ["commute", "Rrugë"], ["meal", "Ushqim"], ["sleep", "Gjumë"], ["family", "Familje"], ["gym", "Palestër"], ["other", "Tjetër"]];
 const ENERGY: [Energy | "", string][] = [["", "—"], ["high", "E lartë"], ["medium", "Mesatare"], ["low", "E ulët"]];
-
-const INPUT = "min-h-11 w-full rounded-m border border-line bg-raised px-3 text-ink aria-[invalid=true]:border-bad";
-
-function Field({ label, hint, errors, children }: { label: string; hint?: string; errors?: string[]; children: (props: { id: string; "aria-describedby": string | undefined; "aria-invalid": boolean }) => ReactNode }) {
-    const id = useId();
-    const describedBy = [hint ? `${id}-hint` : null, errors?.length ? `${id}-error` : null].filter(Boolean).join(" ") || undefined;
-    return (
-        <div className="flex flex-col gap-1.5">
-            <label htmlFor={id} className="font-semibold">
-                {label}
-            </label>
-            {children({ id, "aria-describedby": describedBy, "aria-invalid": Boolean(errors?.length) })}
-            {hint && (
-                <p id={`${id}-hint`} className="text-[13px] text-muted">
-                    {hint}
-                </p>
-            )}
-            {errors?.length ? (
-                <p id={`${id}-error`} className="text-[13px] font-semibold text-bad">
-                    {errors.join(" ")}
-                </p>
-            ) : null}
-        </div>
-    );
-}
 
 function Select<T extends string>({ value, options, onChange, ...rest }: { value: T; options: [T, string][]; onChange: (value: T) => void } & Omit<React.SelectHTMLAttributes<HTMLSelectElement>, "value" | "onChange">) {
     return (

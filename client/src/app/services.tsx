@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState, useSyncExternalStore } 
 import type { ApiClient } from "../api/client.ts";
 import { clockFrom } from "../domain/clock.ts";
 import type { Clock } from "../domain/clock.ts";
+import type { AccountStore } from "../state/accountStore.ts";
 import type { PlanStore, StoreState } from "../state/planStore.ts";
 import type { Appearance } from "../settings/appearance.ts";
 import type { Repository } from "../storage/repository.ts";
@@ -10,6 +11,7 @@ export interface Services {
     api: ApiClient;
     repository: Repository;
     store: PlanStore;
+    account: AccountStore;
     appearance: Appearance;
     setAppearance: (next: Appearance) => void;
 }

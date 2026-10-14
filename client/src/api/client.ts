@@ -1,4 +1,6 @@
 import type {
+    AccountSession,
+    AccountUser,
     AdjustPlanRequest,
     CreatePlanRequest,
     ErrorCode,
@@ -31,6 +33,11 @@ export type ApiFailureKind =
     | "not_configured"
     | "ai_failed"
     | "offline"
+    | "unauthenticated"
+    | "invalid_credentials"
+    | "unverified"
+    | "conflict"
+    | "forbidden"
     | "server";
 
 export interface ApiFailure {
@@ -71,6 +78,11 @@ const FALLBACK: Record<ApiFailureKind, string> = {
     not_configured: "AI nuk është konfiguruar ende.",
     ai_failed: "AI nuk mundi ta krijojë planin. Provo përsëri.",
     offline: "Nuk u lidhëm dot me serverin. Kontrollo internetin dhe provo përsëri.",
+    unauthenticated: "Duhet të hysh në llogari.",
+    invalid_credentials: "Email-i ose fjalëkalimi nuk është i saktë.",
+    unverified: "Konfirmo email-in që të përdorësh sinkronizimin dhe AI-n.",
+    conflict: "Kjo u ndryshua diku tjetër. Po e shfaqim versionin e fundit.",
+    forbidden: "Kërkesa nuk u pranua nga kjo faqe.",
     server: "Ndodhi një gabim i papritur. Provo përsëri.",
 };
 
@@ -97,6 +109,27 @@ const KIND_FOR_CODE: Record<ErrorCode, ApiFailureKind> = {
     AI_FAILED: "ai_failed",
     NOT_FOUND: "server",
     INTERNAL: "server",
+    UNAUTHENTICATED: "unauthenticated",
+    INVALID_CREDENTIALS: "invalid_credentials",
+    FORBIDDEN_ORIGIN: "forbidden",
+    EMAIL_NOT_VERIFIED: "unverified",
+    EMAIL_INVALID: "validation",
+    NAME_INVALID: "validation",
+    AGE_NOT_CONFIRMED: "validation",
+    PASSWORD_TOO_SHORT: "validation",
+    PASSWORD_TOO_LONG: "validation",
+    PASSWORD_INVALID: "validation",
+    PASSWORD_COMPROMISED: "validation",
+    PASSWORD_CHECK_UNAVAILABLE: "busy",
+    TOKEN_INVALID: "validation",
+    TOO_MANY_ATTEMPTS: "rate_limited",
+    REVISION_CONFLICT: "conflict",
+    MARK_CONFLICT: "conflict",
+    PLAN_EXISTS: "conflict",
+    PLAN_LIMIT: "validation",
+    OPERATION_INVALID: "validation",
+    STATUS_INVALID: "validation",
+    BUSY: "busy",
 };
 
 const isErrorCode = (value: unknown): value is ErrorCode => typeof value === "string" && Object.hasOwn(KIND_FOR_CODE, value);
@@ -106,6 +139,7 @@ function kindForStatus(status: number): ApiFailureKind {
     if (status === 400 || status === 413) return "validation";
     if (status === 429) return "rate_limited";
     if (status === 504) return "timeout";
+    if (status === 401) return "unauthenticated";
     return "server";
 }
 
@@ -179,6 +213,32 @@ export function createApiClient({ baseUrl = "", fetch: fetchFn = globalThis.fetc
         createPlan: (input: CreatePlanRequest, options: RequestOptions = {}) => request<PlanAnswer>("POST", "/api/create-plan", input, aiTimeoutMs, options),
 
         adjustPlan: (input: AdjustPlanRequest, options: RequestOptions = {}) => request<PlanAnswer>("POST", "/api/adjust-plan", input, aiTimeoutMs, options),
+
+        /**
+         * Accounts. Same result shape as everything else. Cookies travel by themselves (same origin); the
+         * session token is never visible to this code. When the server runs without accounts every call
+         * but status answers 404, which is a `server` failure, and status says "off".
+         */
+        account: {
+            status: (options: RequestOptions = {}) => request<{ accounts: "off" | "memory" }>("GET", "/api/account/status", undefined, timeoutMs, options),
+            me: (options: RequestOptions = {}) => request<{ user: AccountUser; canSync: boolean }>("GET", "/api/account/me", undefined, timeoutMs, options),
+            signUp: (input: { email: string; password: string; name: string; confirmsAge16: boolean }, options: RequestOptions = {}) =>
+                request<{ ok: true; status: "check_email" }>("POST", "/api/account/signup", input, timeoutMs, options),
+            verify: (token: string, options: RequestOptions = {}) => request<{ ok: true }>("POST", "/api/account/verify", { token }, timeoutMs, options),
+            resendVerification: (options: RequestOptions = {}) => request<{ ok: true }>("POST", "/api/account/resend-verification", {}, timeoutMs, options),
+            logIn: (input: { email: string; password: string }, options: RequestOptions = {}) =>
+                request<{ ok: true; user: AccountUser }>("POST", "/api/account/login", input, timeoutMs, options),
+            logOut: (options: RequestOptions = {}) => request<{ ok: true }>("POST", "/api/account/logout", {}, timeoutMs, options),
+            forgotPassword: (email: string, options: RequestOptions = {}) => request<{ ok: true }>("POST", "/api/account/password/forgot", { email }, timeoutMs, options),
+            resetPassword: (input: { token: string; newPassword: string }, options: RequestOptions = {}) =>
+                request<{ ok: true }>("POST", "/api/account/password/reset", input, timeoutMs, options),
+            changePassword: (input: { currentPassword: string; newPassword: string }, options: RequestOptions = {}) =>
+                request<{ ok: true }>("POST", "/api/account/password/change", input, timeoutMs, options),
+            sessions: (options: RequestOptions = {}) => request<{ sessions: AccountSession[] }>("GET", "/api/account/sessions", undefined, timeoutMs, options),
+            revokeSession: (sessionId: string, options: RequestOptions = {}) => request<{ ok: true }>("POST", "/api/account/sessions/revoke", { sessionId }, timeoutMs, options),
+            revokeOtherSessions: (options: RequestOptions = {}) => request<{ ok: true; removed: number }>("POST", "/api/account/sessions/revoke-others", {}, timeoutMs, options),
+            deleteAccount: (password: string, options: RequestOptions = {}) => request<{ ok: true }>("POST", "/api/account/delete", { password }, timeoutMs, options),
+        },
     };
 }
 

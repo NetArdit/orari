@@ -45,7 +45,9 @@ if (process.env.ACCOUNTS_MODE === "memory") {
         repo: createMemoryAccountsRepository(),
         hasher: createPasswordHasher(),
         mail: createTestMail({ directory: "dev-mail" }),
-        passwordCheck: createPwnedCheck(),
+        // ACCOUNTS_PWNED_CHECK=off is for automated browser runs and offline development in memory mode only:
+        // it skips the third-party lookup and treats every password as not found. It does not exist for any other mode.
+        passwordCheck: process.env.ACCOUNTS_PWNED_CHECK === "off" ? async () => ({ status: "clean" }) : createPwnedCheck(),
         baseUrl,
     });
     // Mail that could not be sent is retried from the outbox; this also picks up what a restart left.

@@ -1,6 +1,7 @@
 import { useServices } from "../app/services.tsx";
 import { COLOR_MODES, LAYOUT_LABELS, LAYOUT_STYLES, MODE_LABELS } from "../settings/appearance.ts";
 import { ScreenTitle } from "../ui/primitives.tsx";
+import { AccountPanel } from "./AccountScreens.tsx";
 import type { MigrationOutcome } from "../storage/legacy.ts";
 
 export interface DeviceInfo {
@@ -31,6 +32,8 @@ export function SettingsScreen({ device, planCount }: { device: DeviceInfo; plan
     return (
         <>
             <ScreenTitle title="Cilësimet" />
+
+            <AccountPanel />
 
             <fieldset className="flex flex-col gap-3">
                 <legend className="mb-1 text-lg font-semibold">Stili</legend>

@@ -48,6 +48,21 @@ export interface HealthAnswer {
     aiConfigured: boolean;
 }
 
+export interface AccountUser {
+    id: string;
+    email: string;
+    name: string;
+    emailVerified: boolean;
+}
+
+export interface AccountSession {
+    id: string;
+    device: string;
+    createdAt: string;
+    lastSeenAt: string;
+    current: boolean;
+}
+
 /** The stable name of an error, from the server's own list. The Albanian text beside it is only for display. */
 export type ErrorCode = (typeof schema.ERROR_CODES)[number];
 

@@ -13,6 +13,11 @@ describe("addresses", () => {
         ["/app/planet/abc-123", { name: "plan", planId: "abc-123" }],
         ["/app/planet/abc-123/seanca/s-9", { name: "session", planId: "abc-123", sessionId: "s-9" }],
         ["/app/une", { name: "me" }],
+        ["/app/hyr", { name: "signIn" }],
+        ["/app/regjistrohu", { name: "signUp" }],
+        ["/app/harrova", { name: "forgot" }],
+        ["/app/reset", { name: "reset" }],
+        ["/app/verify", { name: "verify" }],
     ];
 
     test.each(cases)("%s", (path, route) => {
@@ -28,6 +33,7 @@ describe("addresses", () => {
     test("every route's address leads back to the same route, including ids with awkward characters", () => {
         const routes: Exclude<Route, { name: "notFound" }>[] = [
             { name: "today" }, { name: "week" }, { name: "newPlan" }, { name: "plans" }, { name: "me" },
+            { name: "signIn" }, { name: "signUp" }, { name: "forgot" }, { name: "reset" }, { name: "verify" },
             { name: "plan", planId: "3f2b-uuid" },
             { name: "plan", planId: "me hapësirë/pjerrëse?#ë" },
             { name: "session", planId: "p 1", sessionId: "s/2" },
