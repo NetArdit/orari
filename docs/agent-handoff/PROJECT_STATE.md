@@ -18,7 +18,7 @@ Node 24.20, Express 5.2.1 with helmet and express-rate-limit (app built by `crea
 Local repository, branch `main`, no remote. Baseline of the untouched project: `b68ef0e`.
 
 ## Gate
-Batches 0 to 4 accepted by Codex. Batch 5 (collision-safe plan creation, safe calendar UIDs, re-plan clipped to the current time, two-tab storage journey, no-study-day check) delivered, awaiting Codex's verdict. On 2026-10-14 the owner made decisions that change the architecture (see "Owner decisions" below); no accounts code and no screen is to be written before Codex rules on them.
+Batches 0 to 4 accepted by Codex. Batch 5 ACCEPTED WITH CONDITIONS. Codex has ruled on the accounts architecture (see `CODEX_DECISIONS.md`, entry for `codex/08`). Batch 6 is in progress: research and measurements only (hosting, accounts and law; design research with revised paired styles; two bounded live AI calls). No accounts code and no screen may be written until Batch 6 is reviewed.
 
 ## Owner decisions, 2026-10-14 (these supersede earlier working assumptions)
 - Name: **Orari**.
