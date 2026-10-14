@@ -1,118 +1,139 @@
-# CLAUDE REPORT 05 — Batch 4: client domain, storage integrity, state layer, error codes
+# CLAUDE REPORT 06 — Batch 5 results, and three owner decisions that change the plan
 
 Date: 2026-10-14. Author: Claude Code. Previous reports: `docs/agent-handoff/reports/`.
 
-## 1. Status
+This report has two parts. Part A is Batch 5, which is complete. Part B is more important: while Batch 5 was running the owner answered the open questions, and two of the answers overturn assumptions we were building on. Part B needs your architecture ruling before any further code.
 
-**VERIFIED COMPLETE** against `docs/agent-handoff/codex/06-batch-3-verdict.md`, "Batch 4". No screen, token or component was built. No live AI call. Nothing pushed or deployed. The owner has not yet answered the four questions (design direction, default theme, name, accounts).
+---
 
-Two defects were found by tests written in this batch, both fixed in it:
-- An address with a broken percent-escape under `/app` answered **500**; it now answers 400 `BAD_REQUEST` (found while strengthening the traversal test).
-- The store's `load()` did not check the storage version, so data written by a newer app version would have been read and reinterpreted; the repository had the check, the store never called it (found by the store's own test).
+# PART A — Batch 5
 
-## 2. Commits
+## A1. Status
 
-- `00f51be` Stable error codes on every error body; stronger traversal test; 400 for broken addresses. `lib/app.js`, `lib/plan.js`, `lib/schema.js`, `test/routes.test.js`, `test/plan.test.js`.
-- `c1264cd` Client classifies failures by code. `client/src/api/client.ts`, `types.ts`, `client.test.ts`.
-- `7aaac45` Storage: checks a write depends on are made inside the write. `client/src/storage/store.ts`, `idb.ts`, `repository.ts`, `legacy.ts`, `storage.test.ts`.
-- `b31ee33` Domain. `client/src/domain/clock.ts`, `progress.ts`, `replan.ts`, `planForm.ts`, `ics.ts`, `domain.test.ts`.
-- The state commit (see `git log`): `client/src/state/planStore.ts`, `flows.ts`, `state.test.ts`.
+**VERIFIED COMPLETE** against `docs/agent-handoff/codex/07-batch-4-verdict.md`, "Batch 5". No screen, no live AI call, no PDF dependency, no cutover.
 
-## 3. Your Batch 3 conditions, one by one
+## A2. Commits
 
-1. **Initialise under two tabs.** `KeyValueStore.commit(writes, { onlyIfAbsent })`: the "no profile yet" check is evaluated inside the same transaction as the writes (in IndexedDB, a `getKey` request at the start of the readwrite transaction, with the puts issued from its success callback; readwrite transactions on one object store are serialised across tabs). The loser gets `AlreadySetUpError` and none of its data is stored. `migrateFromLegacy` treats that as "already done" rather than a failure. Tests: two set-ups started together in both orders, and two migrations together. The old check-then-write behaviour, restored as a mutant, fails 3 tests.
-2. **Restore under a concurrent save.** A new write kind, `{ deletePrefix, except }`, lists the keys to remove inside the transaction. Test: another tab's save lands immediately before the restore's commit; the plan does not survive. The old "list first, then write" behaviour, restored as a mutant, fails that test.
-3. **Duplicate plan ids in a backup** are counted (`plansDuplicated`) and the first is kept; they no longer collapse silently. `initialise` refuses two plans with one id outright.
-4. **Generated-id collisions.** Replacement ids, for sessions and for plans, are checked against every id in use: the originals further down the list and the ones just handed out. After 50 colliding offers the conversion stops rather than store duplicates. `mergeReplan` and `planFromAnswer` do the same for ids arriving from the server.
-5. **Unknown legacy status or kind** are stored as `pending` / `learning` (which claim no progress) and now counted in the outcome (`sessionsWithUnknownStatus`, `sessionsWithUnknownKind`), only for plans actually carried over, so a screen can tell the person.
-6. **Traversal test.** Raw `http.request` (fetch removes `..` before sending), a real file one level above the client folder containing a unique sentinel, ten attack paths (plain, percent-encoded in both cases, backslash, nested under `assets`, doubled slash). Asserts the sentinel is never in the body and the status is 400/403/404 or the client's own page.
+- `7504dfe` New plans never overwrite existing ones; safe calendar UIDs; no-study-day check. `client/src/storage/repository.ts`, `client/src/state/planStore.ts`, `flows.ts`, `client/src/domain/ics.ts`, `planForm.ts`, tests.
+- `1e6dcd5` Re-plan: today is planned only from the current time on. `lib/time.js`, `lib/plan.js`, `lib/schema.js`, `lib/app.js`, `public/script.js`, `client/src/domain/replan.ts`, `clock.ts`, tests, the re-plan journey.
+- `1f4a576` Two real tabs: storage journey through a harness page built only with `E2E=1`. `e2e/app-two-tabs.mjs`, `e2e/browser.mjs` (`newTab`), `e2e/build-harness.mjs`, `client/e2e-harness.html`, `client/src/e2eHarness.ts`, `client/vite.config.ts`.
 
-**NOT TESTED**: two real browser tabs racing. The IndexedDB path is exercised by the single-tab journey (26 of 26 after the change); the race itself is covered only against the memory store, whose commit is atomic in the same way. Driving two tabs needs a second DevTools target in `e2e/browser.mjs`; I can add it if you want it before cutover.
+## A3. What each condition became
 
-## 4. Error codes
+1. **Plan-id collisions.** `repository.createPlan` writes with `onlyIfAbsent: [plan key]` inside the transaction and throws `PlanExistsError`; `savePlan` remains the deliberate replace for an existing plan. `store.addPlan` retries under another id (up to 5) and returns the id used; the create flow reports that id. Tests: a taken id in this tab; a plan another tab stored a moment ago; two simultaneous creates; no free id; a failed write.
+2. **Calendar UID.** `uidFor` keeps `[A-Za-z0-9.-]` and replaces every other character by `_<code point>_`, which is one-to-one. Test: an id containing CR, LF, `ATTENDEE:` and `SUMMARY:` produces one `UID` line, one `SUMMARY` line and no injected property.
+3. **Current time on re-plan.** `progress.now` (optional, a time of day, validated and tidied like every other time). `clipDayFrom` cuts the first day's windows; a window in progress keeps what is left if that is at least 20 minutes. Without `now` the behaviour is as before. Tests: before, during and after windows at function, plan and route level; a session earlier than now is dropped and reported; nothing left on the last day → 400 `NO_FREE_TIME` without calling the AI. Both clients send it; the re-plan journey checks the old page does (16 of 16).
+4. **Two real tabs.** `e2e/app-two-tabs.mjs`, Edge 155, one profile, two tabs, the app's own repository over IndexedDB through a harness page that exists only in an `E2E=1` build: **8 of 8**. Twenty rounds each, with the start of one tab varied by a few milliseconds so both orders occur:
+   - first set-up: every round exactly one tab won, the other got `already_set_up`, storage held the winner's data alone (A won 1, B won 19);
+   - new plan under a taken id: one stored whole, the other `plan_exists` (A 1, B 19);
+   - restore against a simultaneous save: no old plan ever survived and no restored plan was ever missing; the save landed after the restore 11 times and before it 9 times;
+   - the app itself opened in two tabs on a device with the old page's data: both ready, one copied, the other found it done, same two plans, no password in storage.
+   A normal build has no harness page (checked: `client/dist` holds `index.html` and `assets` only).
+5. **No schedulable time.** `studyDatesIn(form)` counts the dates on which study is possible by the days set and the days without study, using the server's rule for unset days. Zero is refused on the availability control. It does not subtract busy time, so it catches "certainly nothing", not "nothing after commitments": that still comes back from the server as `NO_FREE_TIME`. A test confirms the server agrees on the same inputs.
 
-Every error body is `{ code, error }` (plus `fields` on validation). 21 codes, listed with their statuses in `lib/schema.js` (`ERROR_CODES`). A test reads `lib/app.js` and `lib/plan.js` and fails if a code is used but not published, or published but not used. The client maps each code to a kind through a `Record<ErrorCode, ApiFailureKind>`, so a new server code does not compile until it is placed. Without a code only the status is used; a 502 or 503 without our code is treated as an outage in front of the server (`server`), not as an AI result. The provider's limit and unavailability now have their own kind, `provider_unavailable`, instead of being shown as the person's own rate limit.
+## A4. Evidence
 
-The old page is unaffected: it reads `error` only.
+`npm test` 163 of 163. `npm run client:typecheck` clean. `npm run client:test` 174 of 174. `npm audit` 0. Journeys on the final code: app foundation 26 of 26, old-page creation 24 of 24, old-page re-plan 16 of 16, two tabs 8 of 8. Production JavaScript 87.39 kB gzip.
 
-## 5. Proposed domain rules (for your ruling; not presented as product policy)
+Your remark that a save committing after a restore appears beside the restored plans is correct and is now a recorded, accepted outcome of the two-tab journey (it is one of the two valid orders).
 
-All in `client/src/domain/progress.ts`, each a named function, each taking a `Clock` (`{ today, minutes }` in the device's local time) instead of reading the system time.
+Deviation: the harness page and `client:build:e2e` script are additions you did not list by name; they were the only way to drive the real adapter from two tabs without putting test hooks into the normal build.
 
-**"Today"** is the device's local calendar date. Plans hold dates and times of day without a zone, so nothing is converted.
+---
 
-**State of a session** (`sessionState`): the person's mark always wins: `completed` → done, `partial` → partial, `skipped` → skipped, whatever the date. Unmarked: before today → **missed**; after today → upcoming; today, by the minute: before its start → upcoming, from its start → **now**, from its end → **late**. A session is "late" for the rest of its day and becomes "missed" only at midnight.
-Boundary examples (tested): a 17:30–18:30 session is upcoming at 17:29, now at 17:30 and 18:29, late at 18:30 and 23:59, missed at 00:00 next day.
-*Old page:* no "now" or "late"; an unmarked session earlier today is simply pending.
+# PART B — Owner decisions of 2026-10-14
 
-**Completed** (`progressOf().done`) counts sessions marked done. **Partly done is counted separately**, never as completed. *Old page:* the dashboard counts partial as completed, the plan card does not.
+The owner wrote three messages (translated from Albanian; originals in my session):
 
-**Missed** counts unmarked sessions whose day has passed. **Skipped is counted separately**: it is a decision, not a lapse. *Old page:* "missed" on the dashboard is skipped plus overdue together, while the re-plan banner counts overdue only.
+1. "Orari is the name, and here is the API key." The key is in `orari-main/.env`, which git ignores; it appears in no tracked file and no commit (checked). **Please do not open `.env`.**
+2. "Dark or light theme, or Fletore, Tabelë: leave them all in settings but name them differently, and the user chooses and changes it as they wish; you can name it brown/blue theme, dark/light, or however you find most reasonable. And no, make it with a user, because for example if the laptop has no battery they must open it on the phone. And do not forget the login and forgot-password part; I mentioned these earlier too. I want you to work as real engineers, not only coders who just do the job and check that the request works; no, I want engineering and then implementation. Do not forget the roles and tasks divided between you."
+3. "I also want the design to be amazing; I do not want it to look like a standard AI design. Research, find across sites, look and think about what would make the application more attractive and better to use, then analyse, adapt and implement in this project. I want good performance and a truly super-satisfying solution for students, not just a basic project."
 
-**Minutes studied**: full length of done sessions plus half the length of partly done ones (the old page's rule, kept). **Completion**: (done + partial/2) / total; 0 for an empty plan.
+## B1. What this changes
 
-**Needs re-planning** (`needsReplan`): the plan has not ended and has at least one missed session. A skipped session alone does not trigger it; a late one today does not either.
+| Was | Now |
+|---|---|
+| Name undecided | **Orari** |
+| Owner picks one of two directions and a default theme | **Both styles and both modes ship**, chosen by the user in settings, renamed |
+| Working assumption: local profile, no password, export/import | **Real accounts**: sign-up, login, forgot password, the same data on laptop and phone |
+| Design directions as produced | **Research real products first**, then design; must not read as generated |
+| No live AI possible | A key exists; live verification is possible once you authorise it |
 
-**Streak** (`streakDays`): days in a row with study, counted back from today. A day counts if at least one session of any plan that day is done or partly done. A day with sessions planned and none done ends it. **A day with nothing planned neither counts nor ends it.** Today does not end it while it is still going. The number is days with study, not calendar span.
-Examples (tested): Fri and Sat done, Sunday free, Mon and Tue done → 4. Mon done, Tue planned and untouched, Wed and Thu done → 2. Yesterday missed, nothing done today → 0.
-*Old page:* any day without study ends the streak, so a plan with Sunday off can never show more than six.
+What survives from Batches 3 to 5: the API client, router, domain rules, plan form, flows, error codes and the server fixes are unaffected. The IndexedDB repository changes role, from the place where data lives to a per-account cache on the device; its atomic-write design is still what a cache needs. The one-time copy from the old page's localStorage becomes "offer to import this device's plans into the account". The backup file becomes account data export.
 
-**Next session** (`nextSession`): the one in progress if there is one; otherwise the earliest unmarked session that has not started, today or later, across all plans. A late session is not "next"; it stays in today's list as late. *Old page:* skips the session in progress.
+What is now wrong in the records: "D1 working assumption: local profile without password" in `CODEX_DECISIONS.md` and `PROJECT_STATE.md` is superseded by the owner.
 
-**Current plan** (`currentPlan`): the most recently created plan that has not ended.
+## B2. Accounts: the engineering questions, with my recommendations
 
-Questions these raise that are product decisions: whether a late session should be offered a one-tap "move to later today"; whether "partly done" should count towards a streak (it does here); whether skipped sessions should feed the re-plan prompt (they do: they are sent as missed, as the old page does).
+The operating system (section 11) says no database, authentication or external service without a justified requirement and explicit approval. The owner has now given both the requirement and the approval for accounts. Zero cost remains absolute. Evidence labels: what I measured or read today is marked; the rest is engineering judgment.
 
-## 6. The rest of the domain layer
+**Q1. Where does the data live?**
+- (a) PostgreSQL on Neon's free tier. The owner already has a Neon account from another project. Works with any host, survives redeploys. Needs a connection string the owner creates.
+- (b) SQLite through `node:sqlite`, which is built into this Node (VERIFIED: `node:sqlite` loads on Node 24.20 here). No dependency, no account, ideal for development and tests. In production it needs a host with a persistent disk, which free hosts mostly do not give.
+- (c) One engine in both places versus two: two SQL dialects are a known source of "works locally, fails hosted" defects (on the owner's other project an embedded Postgres hid a timezone bug that a real server showed).
+- Recommendation: **PostgreSQL as the only engine**, behind a small repository interface in `lib/`; route and logic tests against an in-memory implementation of that interface; a separate suite that runs the SQL against a real Postgres when a `PG_TEST_URL` is provided, required before any release claim. Driver: `pg` (MIT). Migrations as numbered SQL files applied by a script, no ORM.
 
-- **`replan.ts`**: `progressSummaries` (what the AI is told; capped at the server's 50 lines per list, keeping the most recent, where the old page would have been refused with a 400 once a plan passed 50), `buildAdjustRequest`, `mergeReplan` (keeps the past and everything marked, replaces unmarked sessions from today on, never trusts statuses in the answer, re-ids clashes, does not mutate its input, counts new sessions that are already over), `planFromAnswer`.
-- **`planForm.ts`**: one form state for both ways of starting. `formFromParsed` turns what the AI read into editable state (answers audit finding P1-7); `buildPlanInputs` validates everything at once and reports with the server's field paths, so an error from either side lands on the same control. Material and goal are separate fields (the old form merged them); days are chosen, not typed; a half-filled busy-time row is an error, not silently dropped; overlapping free windows on one day are refused; one-off days without study are supported (P2-4). A test feeds the form's output to the server's own `CreatePlanBody` and requires that the server's normalisation changes nothing.
-- **`ics.ts`**: RFC 5545 export of the sessions still to do, floating local times, stable UIDs from session ids, text escaping, folding at 75 bytes without splitting a character.
+**Q2. Where does it run?** This decides whether the whole thing works, and I have not verified it today.
+- The AI routes hold a request for up to 75 seconds. Serverless function hosts cap request time far below that on free plans (the owner's usual host is Netlify). A long-running Node process is needed, or the AI calls must become jobs the client polls.
+- Free long-running hosts usually sleep when idle and wake slowly.
+- Recommendation: before designing further, a short research task with official documentation: request-time limits, sleep behaviour, persistent storage, custom domain and HTTPS on the realistic free options, and a proposal that fits zero cost. If no free host carries a 75 s request, convert plan generation to "start job, poll status", which also gives honest progress and survives a phone going to sleep. I suspect this conversion is the right design regardless, but I will not assert it without measuring model times with the key.
 
-**A finding for the server, not fixed here**: when a plan is adjusted, the server builds today's calendar from 06:00, so the AI can place a new session at 08:00 when it is already 18:00. The client now counts such sessions (`alreadyOver`) so a screen can say so, but the right fix is for adjust to accept the current local time and start today's windows from it. That is an additive request field and a small change in `lib/time.js`; I recommend it for the next server batch.
+**Q3. Passwords.**
+- OWASP Password Storage Cheat Sheet (read today): Argon2id preferred; where unavailable, scrypt with a minimum of N=2^17, r=8, p=1, or the equivalent sets N=2^16/p=2, N=2^15/p=3, N=2^14/p=5; a unique salt per password; a pepper as optional defence in depth.
+- MEASURED on this machine with Node's built-in `crypto.scrypt`: N=2^15, r=8, p=3 takes 272 ms; N=2^17, r=8, p=1 takes 587 ms and needs about 128 MB per hash.
+- Recommendation: **built-in scrypt, N=2^15, r=8, p=3** (an OWASP-accepted set, about 32 MB per hash, no native dependency to compile on a small host), parameters stored in the hash string so they can be raised later with rehash-on-login, a cap on concurrent hashing so a burst of logins cannot exhaust memory, minimum length 8 with no composition rules, maximum 128, rejection of the most common passwords from a short built-in list. Argon2id would need a native or WASM package; I would add it only if you prefer it over the built-in.
 
-## 7. State layer
+**Q4. Sessions.**
+- Opaque random token (32 bytes) in a cookie: `HttpOnly`, `Secure`, `SameSite=Lax`, path `/`. Only its SHA-256 is stored. Thirty days, renewed on use; listed and revocable ("dil nga të gjitha pajisjet"); rotated at login.
+- CSRF: `SameSite=Lax` plus an `Origin` check on every state-changing request; the API is JSON-only.
+- Not JWT in localStorage: readable by any script on the page and not revocable.
 
-- **`planStore.ts`** (no React): `loading` / `failed` / `ready`. `markSession` changes the screen at once and writes afterwards; on a failed write the mark is taken back to what storage is known to hold and `saveError` is set. Writes to one plan are serialised. An older mark that fails late does not undo a newer one. `savePlan` and `deletePlan` show their effect only once stored.
-- **`flows.ts`**: `createParseFlow`, `createPlanFlow`, `createReplanFlow` on one machine: `idle` → `working` → `done` | `failed`. `start()` while working returns false and sends nothing (duplicate submission). `cancel()` aborts the request and is idle at once. An answer from a cancelled or superseded run is ignored, including when the connection ignores the abort. Failures carry the API kind, message, fields and retry time; three kinds never involve the server: `invalid` (the form), `storage` (the plan could not be kept), `gone` (the plan no longer exists). Re-plan merges into the plan as it is when the answer arrives, after pending marks have been written, so a session ticked while waiting is kept.
+**Q5. Forgot password** (OWASP Forgot Password Cheat Sheet, read today).
+- Same answer and same timing whether or not the address exists. Token from a CSPRNG, single use, short expiry (I propose 30 minutes), only its hash stored, tied to one user. The link built from a configured site address, never from the request's Host header. After a reset: no automatic login, every session ended, a notification e-mail, outstanding reset links invalidated. Rate limits per address and per account; never lock an account because someone requested resets.
+- **E-mail sending** is a new external service. The owner has a Brevo account (free tier) from another project. It needs an API key and a sender address from the owner. In development the message is written to the log, not sent. Without a working sender there is no password reset, so this is a hard dependency on the owner.
+- E-mail verification at sign-up: recommended (a mistyped address makes reset impossible forever) but not blocking use of the app before the link is clicked.
 
-## 8. Evidence
+**Q6. Sync between devices.**
+- The server is the source of truth for a signed-in user. The device keeps a cache (the existing repository) so the timetable opens instantly and can be read offline.
+- Plans are documents with a version number; a change sends the version it was based on and is refused if it is stale. Marking a session is its own small request ("this session, this status, at this time"), applied by last-writer-wins per session, so ticking on the phone and on the laptop never conflicts at plan level.
+- Offline: reading works; marks are queued and sent on reconnect; creating or adjusting a plan needs the network anyway.
+- This replaces "two tabs racing on one database" with "two devices racing on one account". The domain merge rules already written apply unchanged on the server side of that race.
 
-- `npm test`: **148 tests, 148 pass**. `npm run client:typecheck`: clean. `npm run client:test`: **162 tests in 5 files, 162 pass** (api 18, domain 52, router 15, state 33, storage 44). `npm audit`: 0 vulnerabilities. `npm run check`: pass.
-- Type checker: a probe assigning `"NOT_A_CODE"` to `ErrorCode` fails with the union of real codes listed.
-- Browser, built client: `e2e/app-foundation.mjs` **26 of 26** after the storage changes (real IndexedDB).
-- **Mutation checks**: storage, the two old race behaviours restored: both caught (3 and 1 failures). Domain and state: 29 single deliberate bugs prepared; 28 ran. 27 caught on the first pass; the one survivor, "a stale answer is accepted", exposed that my fake API always honoured the abort, so the guard against late answers was never exercised. I added a test with a connection that ignores cancelling; the mutant then fails. The 29th ("comma not escaped in the calendar export") did not run because my shell quoting mangled the marker; that behaviour is asserted directly by the `escapeText` test.
-- Production JavaScript: **87.34 kB gzip** (292 kB raw), against your 200 kB budget. Unchanged by the domain and state modules because no screen imports them yet; expect it to rise when they are used.
+**Q7. This device's existing plans.** On first sign-in on a device that has the old page's data (or new-client local data), offer once: "Ke plane në këtë pajisje. T'i shtojmë te llogaria jote?" Never upload the old plaintext password. Remove the old keys only after a confirmed import, per your cutover ruling.
 
-**NOT TESTED**: anything with a real AI provider; two real tabs; the store and flows inside React (no component uses them yet); IndexedDB failure modes (quota, private mode).
+**Q8. What accounts make possible and necessary.** AI routes require a session, so limits become per account instead of per address (fairer for a school sharing one address). Account deletion and data export become obligations: Kosovo has a personal-data protection law modelled on the GDPR (INFERRED from memory, not verified today; to be checked against the official text before release). A short privacy notice is needed before sign-up collects an e-mail address.
 
-## 9. Deviations and judgment calls
+**Q9. Style and theme as settings.** Two independent choices, stored in the account and cached on the device so the page does not flash the wrong look before sign-in resolves:
+- Stili: the two directions. The owner suggests colour names. Candidates: "Kafe" (the warm paper one) and "Blu" (the cool one), or keeping "Fletore" and "Tabelë".
+- Pamja: "E çelët", "E errët", "Si pajisja".
+- Engineering cost: every screen is verified in four combinations, and the two styles differ in more than colour (type, how time is set, how blocks are drawn), so tokens alone will not carry it; components need a small number of style-dependent variants. A default is still needed for a first visit: I propose Kafe with "Si pajisja".
 
-1. `BAD_REQUEST` is a 21st code you did not list; it came from the defect in section 1.
-2. A new failure kind `provider_unavailable` in the client (you asked to distinguish the provider's limit and unavailability; I gave both one kind because a screen would say the same thing for either).
-3. The Albanian strings inside `planForm.ts` and `flows.ts` (field messages, "Plani u krijua, por nuk u ruajt dot në këtë pajisje…") are needed for the functions to return something, and reuse your approved wording where one existed. The new ones are not approved copy; please read them or defer them to the copy pass.
-4. `planFromAnswer` does not store `stats`, per your ruling 2 on Batch 3.
-5. The unused `gatedStore` idea and one unused parameter were removed before commit; nothing else was refactored.
+## B3. Design: the owner wants research before design
 
-## 10. Known gaps and risks
+The two directions I made were produced without studying real products. The owner asks for exactly that study. Proposed as its own batch, with no code:
 
-- Everything in sections 5 to 7 is untested inside a screen, by design.
-- The old page keeps its own, different counting rules until cutover; the two will show different numbers for the same data if someone compares `/` and `/app` once screens exist.
-- The server finding in section 6 (sessions placed earlier than now on re-plan).
-- Free disk is about 1.4 GB.
+- Look at real, shipped products students and planners use (study planners, calendar and task apps, flashcard apps), on phone widths first: how they show "today", how they show a week, how they make marking a session feel, how they handle empty and failed states, onboarding, and what they do that we can honestly do with our features.
+- Deliverable: a findings document with sources and screenshots or precise descriptions, a list of patterns to adopt and patterns to avoid with reasons, and a revised design proposal (both styles) that you review before the owner sees it.
+- Performance as a design constraint from the start: a budget for first load on a phone on a slow connection, measured in the journeys, alongside your 200 kB JavaScript budget.
 
-## 11. What is blocked and what is not
+## B4. Proposed order of work (for your ruling)
 
-**Blocked on the owner**: every screen, token and component (design direction and default theme); the profile set-up screen's wording (accounts decision); the product name in titles.
+1. **Hosting and architecture research** (Q2), read-only, short: it can invalidate everything else if skipped.
+2. **Design research** (B3), read-only, in parallel with 1.
+3. **Live AI verification with the owner's key**, small and bounded: one parse and one short plan, to learn real response times and whether the model list in `lib/ai.js` still exists. This informs the job-versus-request decision in Q2. Needs your authorisation; your batches so far excluded live calls.
+4. **Accounts backend** in reviewable steps: data layer and migrations; sign-up, login, logout, sessions; forgot and reset password with e-mail behind an interface; then plan storage and sync API. Each specified per section 10 of the operating system before it is written.
+5. **Client**: sign-in, sign-up, reset screens and settings (style, mode), then the planner screens, from the researched design.
+6. Flashcards and quizzes after planner parity, as before.
 
-**Not blocked**, proposed for the next batch:
-- The server change from section 6 (adjust accepts the current local time), with tests.
-- React bindings that carry no visual decisions: `useStore`, `useFlow` hooks over `useSyncExternalStore`, an error boundary, focus management on route change and a live region for announcements, with tests where they can run without a DOM and a journey for the rest.
-- A second tab in `e2e/browser.mjs` and a two-tab journey for first set-up.
-- Backup download and restore upload as functions (Blob, File reading, size limit, the Albanian messages for each failure), without their screen.
-- The cutover procedure as code and tests, following your ruling: snapshot the old data after writes are frozen, replace only migration-only storage, otherwise keep and offer recovery.
-- Groundwork for Phase 4 that needs no design: extracting text from a PDF in the browser and chunking it, as pure functions with tests, behind your constraints. This adds a dependency (`pdfjs-dist`, Apache-2.0) and would need your approval and a size measurement first.
+## B5. What I need from the owner, through you or directly
 
-## 12. Handoff
+- A Neon database (they create it and put `DATABASE_URL` in `.env` themselves) when step 4 reaches the hosted database; not needed for tests.
+- Brevo API key and sender address for password reset, same handling.
+- Where they intend to host, if they have a preference.
+- The three product questions from your last verdict (late session action, partial sessions and streaks, skipped sessions and re-planning) are still unanswered.
 
-Report: `docs/agent-handoff/CLAUDE_REPORT.md`. Request: `docs/agent-handoff/requests/07-batch-4-report.md`. Codex has not read this yet.
+## B6. Gate
+
+Batch 5 delivered. No accounts code has been written. Waiting for your verdict on Batch 5 and your architecture rulings on Part B.
+
+Report: `docs/agent-handoff/CLAUDE_REPORT.md`. Request: `docs/agent-handoff/requests/08-batch-5-and-owner-decisions.md`.

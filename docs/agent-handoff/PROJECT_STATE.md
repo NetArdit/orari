@@ -18,13 +18,21 @@ Node 24.20, Express 5.2.1 with helmet and express-rate-limit (app built by `crea
 Local repository, branch `main`, no remote. Baseline of the untouched project: `b68ef0e`.
 
 ## Gate
-Batches 0 to 3 accepted by Codex. Batch 4 ACCEPTED WITH CONDITIONS; its domain rules are approved as provisional working rules. Batch 5 (collision-safe plan creation, safe calendar UIDs, re-plan clipped to the current local time, a real two-tab storage journey, the no-schedulable-time form case; no UI) is in progress. The two design directions (`docs/design/index.html`) are with the owner together with three other questions (default theme, product name, accounts); no answer yet, and no screen may be built before the choice. JavaScript budget: 200 kB gzip (now 87 kB).
+Batches 0 to 4 accepted by Codex. Batch 5 (collision-safe plan creation, safe calendar UIDs, re-plan clipped to the current time, two-tab storage journey, no-study-day check) delivered, awaiting Codex's verdict. On 2026-10-14 the owner made decisions that change the architecture (see "Owner decisions" below); no accounts code and no screen is to be written before Codex rules on them.
+
+## Owner decisions, 2026-10-14 (these supersede earlier working assumptions)
+- Name: **Orari**.
+- **Real accounts**: sign-up, login, forgot password, the same data on laptop and phone. Supersedes "local profile without password".
+- **Both visual styles and both modes are user settings**; the owner does not choose one. They are to be renamed (the owner suggests colour names such as kafe / blu, and e çelët / e errët).
+- **Design from research of real products**; must not look like generic AI output; good performance; a genuinely satisfying tool for students.
+- An OpenRouter key is in `.env` (ignored by git; never to be printed, committed or read out). Live AI calls still need Codex's authorisation.
+- Engineering before implementation; roles between Codex and Claude to be kept.
 
 ## Approved direction (Codex, 2026-10-14)
 - `client/` with Vite, React, Tailwind, strict TypeScript, types inferred from the Zod schemas; Express, API contracts and business rules stay; new client built beside the old one after the safety net, one cutover after parity and storage migration.
 - Phases: safety net; server correctness and reliability; client foundation and migration of existing flows; flashcards and quizzes; accessibility, performance, copy, release readiness.
 - Flashcards and quizzes are Phase 4: PDF text extracted in the browser, bounded chunks, source pointer on each card, editable cards, IndexedDB, deterministic review scheduling, no OCR in the first version, honest notice that text goes to a third-party model.
-- Working assumption for accounts until the owner decides: local profile without password, with export and import.
+- (Superseded 2026-10-14 by the owner: accounts are real. The earlier working assumption was a local profile without password.)
 - Two static visual directions for the owner to choose from, before broad client UI.
 
 ## Verification available
@@ -45,11 +53,8 @@ P0-2 plaintext passwords and fake login (goes with the local-profile redesign); 
 
 ## Open with the owner
 - Product rules: whether a partly done session counts toward the streak; whether a late session gets a one-tap "move to later today"; whether skipped sessions should prompt re-planning.
-- Design direction: A (Fletore) or B (Tabelë); default theme light or dark.
-- D1 accounts: local profile without password, or real accounts.
-- D2 product name: Orari or StudyFlow.
-- D3 a free OpenRouter key in `.env`, entered by the owner. Until then no AI behaviour can be tested live.
+- For accounts, when the work reaches them: a database connection (the owner creates it and enters it in `.env` themselves), an e-mail sending key and sender address for password reset, and where the app is to be hosted.
 
 ## Blockers
-- No API key: all AI-backed behaviour untested.
-- Machine: about 4 GB RAM, about 2 GB free disk.
+- Hosting facts are unknown: whether any free host can hold a 75-second AI request, or plan generation must become a job that is polled.
+- Machine: about 4 GB RAM, about 1.4 GB free disk.
