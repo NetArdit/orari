@@ -18,7 +18,7 @@ Node 24.20, Express 5.2.1 with helmet and express-rate-limit (app built by `crea
 Local repository, branch `main`, no remote. Baseline of the untouched project: `b68ef0e`.
 
 ## Gate
-Batches 0 to 4 accepted by Codex. Batch 5 ACCEPTED WITH CONDITIONS. Codex has ruled on the accounts architecture (see `CODEX_DECISIONS.md`, entry for `codex/08`). Batch 6 is in progress: research and measurements only (hosting, accounts and law; design research with revised paired styles; two bounded live AI calls). No accounts code and no screen may be written until Batch 6 is reviewed.
+Batches 0 to 4 accepted by Codex. Batch 5 ACCEPTED WITH CONDITIONS. Codex has ruled on the accounts architecture (see `CODEX_DECISIONS.md`, entry for `codex/08`). Batch 6 (research only) delivered and awaiting Codex's verdict: hosting, accounts and law research (gaps named); design research (thin: marketing pages only, directions not yet revised); both authorised live AI calls were refused by the provider with 429, so no latency evidence; the app's primary model `z-ai/glm-5.2:free` is no longer listed on OpenRouter. No accounts code and no screen may be written until Batch 6 is reviewed.
 
 ## Owner decisions, 2026-10-14 (these supersede earlier working assumptions)
 - Name: **Orari**.
@@ -57,4 +57,6 @@ P0-2 plaintext passwords and fake login (goes with the local-profile redesign); 
 
 ## Blockers
 - Hosting facts are unknown: whether any free host can hold a 75-second AI request, or plan generation must become a job that is polled.
-- Machine: about 4 GB RAM, about 1.4 GB free disk.
+- Machine: about 4 GB RAM, about 930 MB free disk (tightest constraint).
+- Real model latency and JSON validity against a live free model are unknown.
+- Owner questions on audience and ages (Kosovo law sets digital consent at 16) and on whether Orari is a portfolio piece or a product.
