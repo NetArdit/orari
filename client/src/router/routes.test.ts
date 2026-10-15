@@ -8,13 +8,19 @@ describe("addresses", () => {
         ["/app/", { name: "today" }],
         ["/app/orari", { name: "week" }],
         ["/app/orari/", { name: "week" }],
+        ["/app/new-plan", { name: "newPlan" }],
         ["/app/plan-i-ri", { name: "newPlan" }],
+        ["/app/plans", { name: "plans" }],
         ["/app/planet", { name: "plans" }],
-        ["/app/planet/abc-123", { name: "plan", planId: "abc-123" }],
+        ["/app/plans/abc-123", { name: "plan", planId: "abc-123" }],
+        ["/app/plans/abc-123/sessions/s-9", { name: "session", planId: "abc-123", sessionId: "s-9" }],
         ["/app/planet/abc-123/seanca/s-9", { name: "session", planId: "abc-123", sessionId: "s-9" }],
         ["/app/une", { name: "me" }],
+        ["/app/sign-in", { name: "signIn" }],
         ["/app/hyr", { name: "signIn" }],
+        ["/app/sign-up", { name: "signUp" }],
         ["/app/regjistrohu", { name: "signUp" }],
+        ["/app/forgot", { name: "forgot" }],
         ["/app/harrova", { name: "forgot" }],
         ["/app/reset", { name: "reset" }],
         ["/app/verify", { name: "verify" }],
@@ -25,7 +31,7 @@ describe("addresses", () => {
     });
 
     test("unknown, incomplete, over-long and foreign addresses are notFound and never throw", () => {
-        for (const path of ["/app/nuk-ekziston", "/app/orari/extra", "/app/planet/a/seanca", "/app/planet/a/tjeter/b", "/app/planet/a/seanca/b/c", "/", "/application", "/app/%E0%A4%A", ""]) {
+        for (const path of ["/app/nuk-ekziston", "/app/orari/extra", "/app/plans/a/sessions", "/app/plans/a/other/b", "/app/plans/a/sessions/b/c", "/", "/application", "/app/%E0%A4%A", ""]) {
             expect(parsePath(path)).toEqual({ name: "notFound", path });
         }
     });
@@ -43,7 +49,7 @@ describe("addresses", () => {
 
     test("addresses are plain and readable", () => {
         expect(hrefFor({ name: "today" })).toBe("/app/");
-        expect(hrefFor({ name: "session", planId: "p1", sessionId: "s1" })).toBe("/app/planet/p1/seanca/s1");
+        expect(hrefFor({ name: "session", planId: "p1", sessionId: "s1" })).toBe("/app/plans/p1/sessions/s1");
     });
 });
 

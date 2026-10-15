@@ -28,7 +28,7 @@ const decode = (part: string): string | null => {
     }
 };
 
-/** The route for a location path such as "/app/planet/abc". Unknown addresses give notFound, never an error. */
+/** The route for a location path such as "/app/plans/abc". Unknown addresses give notFound, never an error. */
 export function parsePath(pathname: string): Route {
     const notFound: Route = { name: "notFound", path: pathname };
 
@@ -40,19 +40,20 @@ export function parsePath(pathname: string): Route {
     if (rest.length > 0) return notFound;
 
     if (first === undefined) return { name: "today" };
-    if (first === "orari" && second === undefined) return { name: "week" };
-    if (first === "plan-i-ri" && second === undefined) return { name: "newPlan" };
-    if (first === "une" && second === undefined) return { name: "me" };
-    if (first === "hyr" && second === undefined) return { name: "signIn" };
-    if (first === "regjistrohu" && second === undefined) return { name: "signUp" };
-    if (first === "harrova" && second === undefined) return { name: "forgot" };
+    // The English addresses are the ones in use; the earlier Albanian ones still open the same screens.
+    if ((first === "week" || first === "orari") && second === undefined) return { name: "week" };
+    if ((first === "new-plan" || first === "plan-i-ri") && second === undefined) return { name: "newPlan" };
+    if ((first === "settings" || first === "une") && second === undefined) return { name: "me" };
+    if ((first === "sign-in" || first === "hyr") && second === undefined) return { name: "signIn" };
+    if ((first === "sign-up" || first === "regjistrohu") && second === undefined) return { name: "signUp" };
+    if ((first === "forgot" || first === "harrova") && second === undefined) return { name: "forgot" };
     // These two paths are the ones the server puts in e-mails (lib/accounts/service.js); keep them in step.
     if (first === "reset" && second === undefined) return { name: "reset" };
     if (first === "verify" && second === undefined) return { name: "verify" };
-    if (first === "planet") {
+    if (first === "plans" || first === "planet") {
         if (second === undefined) return { name: "plans" };
         if (third === undefined) return { name: "plan", planId: second };
-        if (third === "seanca" && fourth !== undefined) return { name: "session", planId: second, sessionId: fourth };
+        if ((third === "sessions" || third === "seanca") && fourth !== undefined) return { name: "session", planId: second, sessionId: fourth };
     }
     return notFound;
 }
@@ -64,23 +65,23 @@ export function hrefFor(route: Exclude<Route, { name: "notFound" }>): string {
         case "today":
             return BASE + "/";
         case "week":
-            return BASE + "/orari";
+            return BASE + "/week";
         case "newPlan":
-            return BASE + "/plan-i-ri";
+            return BASE + "/new-plan";
         case "plans":
-            return BASE + "/planet";
+            return BASE + "/plans";
         case "plan":
-            return `${BASE}/planet/${id(route.planId)}`;
+            return `${BASE}/plans/${id(route.planId)}`;
         case "session":
-            return `${BASE}/planet/${id(route.planId)}/seanca/${id(route.sessionId)}`;
+            return `${BASE}/plans/${id(route.planId)}/sessions/${id(route.sessionId)}`;
         case "me":
-            return BASE + "/une";
+            return BASE + "/settings";
         case "signIn":
-            return BASE + "/hyr";
+            return BASE + "/sign-in";
         case "signUp":
-            return BASE + "/regjistrohu";
+            return BASE + "/sign-up";
         case "forgot":
-            return BASE + "/harrova";
+            return BASE + "/forgot";
         case "reset":
             return BASE + "/reset";
         case "verify":

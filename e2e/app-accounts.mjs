@@ -69,161 +69,166 @@ await browser.run(async () => {
     browser.result.base = BASE;
 
     /* ---------- before signing in ---------- */
-    await goto(BASE + "/app/une");
+    await goto(BASE + "/app/settings");
     await ready();
-    await waitFor(`Boolean(document.querySelector('section[aria-label="Llogaria"] a'))`, "the account panel");
-    check("settings: says plainly that accounts are a demo kept in memory", (await bodyText()).includes("humbasin kur riniset") || (await bodyText()).includes("humbasin sa herë që ai riniset"), await text('section[aria-label="Llogaria"]'));
-    check("settings: offers sign-in and sign-up", (await evaluate(`[...document.querySelectorAll('section[aria-label="Llogaria"] a')].map((a) => a.textContent).join()`)) === "Hyr,Regjistrohu");
+    await waitFor(`Boolean(document.querySelector('section[aria-label="Account"] a'))`, "the account panel");
+    check("settings: says plainly that accounts are a demo kept in memory", (await bodyText()).includes("lost whenever it restarts"), await text('section[aria-label="Account"]'));
+    check("settings: offers sign-in and sign-up", (await evaluate(`[...document.querySelectorAll('section[aria-label="Account"] a')].map((a) => a.textContent).join()`)) === "Sign in,Sign up");
 
     /* ---------- sign-up, refused ---------- */
-    await goto(BASE + "/app/regjistrohu");
+    await goto(BASE + "/app/sign-up");
     await ready();
-    check("sign-up: discloses the leaked-password lookup and the external AI before anything is typed", (await bodyText()).includes("Have I Been Pwned") && (await bodyText()).includes("ofruesi të jashtëm"));
+    check("sign-up: discloses the leaked-password lookup and the external AI before anything is typed", (await bodyText()).includes("Have I Been Pwned") && (await bodyText()).includes("outside AI provider"));
 
-    await fill("Emri", "Arta");
-    await fill("Email", "not-an-email");
-    await fill("Fjalëkalimi", PASSWORD);
+    await fill("Name", "Arta");
+    await fill("E-mail", "not-an-email");
+    await fill("Password", PASSWORD);
     await tickAge();
-    await press("Krijo llogarinë");
+    await press("Create account");
     await waitFor(`document.querySelector('main [id$="-error"]') !== null`, "an error");
-    check("sign-up: a bad e-mail is refused beside the e-mail field", (await text('main [id$="-error"]'))?.includes("emri@shembull.com"), await text('main [id$="-error"]'));
+    check("sign-up: a bad e-mail is refused beside the e-mail field", (await text('main [id$="-error"]'))?.includes("name@example.com"), await text('main [id$="-error"]'));
 
-    await fill("Email", EMAIL);
-    await fill("Fjalëkalimi", "shkurt");
-    await press("Krijo llogarinë");
-    await waitFor(`[...document.querySelectorAll('main [id$="-error"]')].some((e) => e.textContent.includes("15 shkronja"))`, "the password error");
+    await fill("E-mail", EMAIL);
+    await fill("Password", "short");
+    await press("Create account");
+    await waitFor(`[...document.querySelectorAll('main [id$="-error"]')].some((e) => e.textContent.includes("at least 8 characters"))`, "the password error");
     check("sign-up: a short password is refused beside the password field, with the reason", true);
 
-    await fill("Fjalëkalimi", PASSWORD);
+    await fill("Password", PASSWORD);
     await evaluate(`document.querySelector('main input[type=checkbox]').click()`); // untick
-    await press("Krijo llogarinë");
-    await waitFor(`document.body.textContent.includes("16 vjeç")  && document.querySelector('main input[type=checkbox]')?.getAttribute("aria-invalid") === "true"`, "the age error");
+    await press("Create account");
+    await waitFor(`document.body.textContent.includes("16 and over")  && document.querySelector('main input[type=checkbox]')?.getAttribute("aria-invalid") === "true"`, "the age error");
     check("sign-up: without the 16-and-over declaration it is refused", true);
 
     /* ---------- sign-up, accepted ---------- */
     await tickAge();
-    await press("Krijo llogarinë");
-    await waitFor(`document.querySelector("main h1")?.textContent === "Kontrollo email-in"`, "the confirmation");
-    check("sign-up: the answer does not say whether the address was new", !(await bodyText()).includes("u krijua") && (await bodyText()).includes("Nëse adresa"));
+    await press("Create account");
+    await waitFor(`document.querySelector("main h1")?.textContent === "Check your e-mail"`, "the confirmation");
+    check("sign-up: the answer does not say whether the address was new", !(await bodyText()).includes("was created") && (await bodyText()).includes("If "));
     const verification = await waitForMail("verification", 1);
     check("the verification link is built from the configured address and carries its token in the fragment", /\/app\/verify#token=[A-Za-z0-9_-]{20,}$/.test(verification.link), verification.link.replace(/token=.*/, "token=…"));
 
     /* ---------- verifying ---------- */
     await open(BASE + linkPath(verification.link));
-    await waitFor(`document.querySelector('main [role=status]')?.textContent.includes("u konfirmua")`, "the verification result");
+    await waitFor(`document.querySelector('main [role=status]')?.textContent.includes("E-mail confirmed")`, "the verification result");
     check("verify: the link confirms the address", true);
     check("verify: the token is gone from the address bar and the history", (await evaluate(`window.location.hash`)) === "");
 
     await open(BASE + linkPath(verification.link));
     await waitFor(`document.querySelector('main [role=alert]') !== null`, "the second use to be refused");
-    check("verify: the same link used again is refused", (await text("main [role=alert]"))?.includes("nuk vlen ose ka skaduar"));
+    check("verify: the same link used again is refused", (await text("main [role=alert]"))?.includes("not valid or has expired"));
 
     /* ---------- sign-in ---------- */
-    await goto(BASE + "/app/hyr");
+    await goto(BASE + "/app/sign-in");
     await ready();
-    await fill("Email", EMAIL);
-    await fill("Fjalëkalimi", "e gabuar e gabuar e gabuar");
-    await press("Hyr");
+    await fill("E-mail", EMAIL);
+    await fill("Password", "wrong wrong wrong wrong");
+    await press("Sign in");
     await waitFor(`document.querySelector('main [role=alert]') !== null`, "the refusal");
-    check("sign-in: a wrong password says only that the e-mail or password is wrong", (await text("main [role=alert]")) === "Email-i ose fjalëkalimi nuk është i saktë.", await text("main [role=alert]"));
+    check("sign-in: a wrong password says only that the e-mail or password is wrong", (await text("main [role=alert]")) === "The e-mail or password is not correct.", await text("main [role=alert]"));
 
-    await fill("Email", "askush@example.test");
-    await fill("Fjalëkalimi", "e gabuar e gabuar e gabuar");
-    await press("Hyr");
-    await sleep(500);
-    check("sign-in: an unknown address gets exactly the same message", (await text("main [role=alert]")) === "Email-i ose fjalëkalimi nuk është i saktë.");
+    await fill("E-mail", "askush@example.test");
+    await fill("Password", "wrong wrong wrong wrong");
+    await press("Sign in");
+    await waitFor(`document.querySelector('main [role=alert]')?.textContent === "The e-mail or password is not correct."`, "the same refusal").catch(() => undefined);
+    await sleep(300);
+    check("sign-in: an unknown address gets exactly the same message", (await text("main [role=alert]")) === "The e-mail or password is not correct.");
 
-    await fill("Email", EMAIL);
-    await fill("Fjalëkalimi", PASSWORD);
-    await press("Hyr");
-    await waitFor(`location.pathname === "/app/une"`, "the redirect to settings");
-    await waitFor(`document.querySelector('section[aria-label="Llogaria"]')?.textContent.includes(${JSON.stringify(EMAIL)})`, "the signed-in panel");
-    check("sign-in: lands on settings showing the person's name and e-mail", (await text('section[aria-label="Llogaria"]')).includes("Arta"));
+    await fill("E-mail", EMAIL);
+    await fill("Password", PASSWORD);
+    await press("Sign in");
+    await waitFor(`location.pathname === "/app/settings"`, "the redirect to settings");
+    await waitFor(`document.querySelector('section[aria-label="Account"]')?.textContent.includes(${JSON.stringify(EMAIL)})`, "the signed-in panel");
+    check("sign-in: lands on settings showing the person's name and e-mail", (await text('section[aria-label="Account"]')).includes("Arta"));
     check("the session cookie is not readable by the page's own script", !(await evaluate(`document.cookie`)).includes("orari_session"));
 
-    await goto(BASE + "/app/une");
+    await goto(BASE + "/app/settings");
     await ready();
-    await waitFor(`document.querySelector('section[aria-label="Llogaria"]')?.textContent.includes(${JSON.stringify(EMAIL)})`, "the panel after a reload");
+    await waitFor(`document.querySelector('section[aria-label="Account"]')?.textContent.includes(${JSON.stringify(EMAIL)})`, "the panel after a reload");
     check("a reload keeps the person signed in", true);
-    check("the device list shows this device", (await text('section[aria-label="Llogaria"]')).includes("(kjo)"));
+    check("the device list and the sync buttons are gone", !(await bodyText()).includes("Get plans from") && !(await bodyText()).includes("Send the plans"));
+    check("the log out button is the last control of the settings screen", (await evaluate(`[...document.querySelectorAll("main button")].pop().textContent.trim()`)) === "Log out");
 
-    await press("Dërgo planet e kësaj pajisjeje");
-    await waitFor(`document.querySelector('[data-testid="sync"] [role=status]')?.textContent.startsWith("U dërguan")`, "the sync answer");
-    check("sync: sending plans answers in words, and says the demo account is forgotten on restart", (await text('[data-testid="sync"]')).includes("harrohet kur ndalet serveri"));
+    /* ---------- editing the account ---------- */
+    await evaluate(`(() => { const i = document.querySelector('[data-testid=account-name] input'); const set = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set; set.call(i, 'Arta Krasniqi'); i.dispatchEvent(new Event('input', { bubbles: true })); })()`);
+    await evaluate(`[...document.querySelectorAll('[data-testid=account-name] button')].find((b) => b.textContent.includes('Save name')).click()`);
+    await waitFor(`document.querySelector('[data-testid=account-name]')?.textContent.includes("Name saved.")`, "the name saved");
+    await waitFor(`document.querySelector('section[aria-label="Account"]')?.textContent.includes("Arta Krasniqi")`, "the new name shown");
+    check("account: the name can be changed and is saved", true);
 
-    await press("Dil");
-    await waitFor(`document.querySelector('section[aria-label="Llogaria"]')?.textContent.includes("Regjistrohu")`, "the signed-out panel");
-    await goto(BASE + "/app/une");
+    await press("Log out");
+    await waitFor(`document.querySelector('section[aria-label="Account"]')?.textContent.includes("Sign up")`, "the signed-out panel");
+    await goto(BASE + "/app/settings");
     await ready();
-    await waitFor(`Boolean(document.querySelector('section[aria-label="Llogaria"] a'))`, "the panel");
-    check("sign-out: stays signed out after a reload", (await text('section[aria-label="Llogaria"]')).includes("Hyr"));
+    await waitFor(`Boolean(document.querySelector('section[aria-label="Account"] a'))`, "the panel");
+    check("sign-out: stays signed out after a reload", (await text('section[aria-label="Account"]')).includes("Sign in"));
 
     /* ---------- forgotten password ---------- */
-    await goto(BASE + "/app/harrova");
+    await goto(BASE + "/app/forgot");
     await ready();
-    await fill("Email", "askush@example.test");
-    await press("Dërgo lidhjen");
+    await fill("Account e-mail", "askush@example.test");
+    await press("Send the link");
     await waitFor(`document.querySelector('main [role=status]') !== null`, "the answer");
     const unknownAnswer = await text("main [role=status]");
-    check("forgot: an unknown address gets the same answer and no mail", mailTo("reset").length === 0 && unknownAnswer.includes("Nëse ka një llogari"), unknownAnswer);
+    check("forgot: an unknown address gets the same answer and no mail", mailTo("reset").length === 0 && unknownAnswer.includes("If there is an account"), unknownAnswer);
 
-    await goto(BASE + "/app/harrova");
+    await goto(BASE + "/app/forgot");
     await ready();
-    await fill("Email", EMAIL);
-    await press("Dërgo lidhjen");
+    await fill("Account e-mail", EMAIL);
+    await press("Send the link");
     await waitFor(`document.querySelector('main [role=status]') !== null`, "the answer");
     check("forgot: the known address gets word for word the same answer", (await text("main [role=status]")) === unknownAnswer);
     const reset = await waitForMail("reset", 1);
 
     await open(BASE + linkPath(reset.link));
     await ready();
-    await fill("Fjalëkalimi i ri", "shkurt");
-    await fill("Shkruaje përsëri", "shkurt");
-    await press("Vendose fjalëkalimin");
-    await waitFor(`[...document.querySelectorAll('main [id$="-error"]')].some((e) => e.textContent.includes("15 shkronja"))`, "the weak-password error");
+    await fill("New password", "short");
+    await fill("Repeat it", "short");
+    await press("Set the password");
+    await waitFor(`[...document.querySelectorAll('main [id$="-error"]')].some((e) => e.textContent.includes("at least 8 characters"))`, "the weak-password error");
     check("reset: a weak password is refused and the link is not used up", true);
     check("reset: the token is already out of the address bar", (await evaluate(`window.location.hash`)) === "");
 
-    await fill("Fjalëkalimi i ri", NEW_PASSWORD);
-    await fill("Shkruaje përsëri", NEW_PASSWORD + "x");
+    await fill("New password", NEW_PASSWORD);
+    await fill("Repeat it", NEW_PASSWORD + "x");
     await sleep(200);
-    check("reset: two different entries are caught before sending", (await bodyText()).includes("Dy fjalëkalimet nuk janë njësoj") && (await evaluate(`[...document.querySelectorAll("main button")].find((b) => b.textContent.includes("Vendose")).disabled`)));
+    check("reset: two different entries are caught before sending", (await bodyText()).includes("The two passwords are not the same") && (await evaluate(`[...document.querySelectorAll("main button")].find((b) => b.textContent.includes("Set the password")).disabled`)));
 
-    await fill("Shkruaje përsëri", NEW_PASSWORD);
-    await press("Vendose fjalëkalimin");
-    await waitFor(`document.querySelector("main h1")?.textContent === "Fjalëkalimi u ndryshua"`, "the success");
-    check("reset: succeeds with the same link, and does not sign the person in", (await text("main"))?.includes("Nuk të futëm vetë"));
+    await fill("Repeat it", NEW_PASSWORD);
+    await press("Set the password");
+    await waitFor(`document.querySelector("main h1")?.textContent === "Password changed"`, "the success");
+    check("reset: succeeds with the same link, and does not sign the person in", (await text("main"))?.includes("We did not sign you in"));
 
     // The same page without a token in its address (as after the page removed it, or a mistyped link).
     await open(BASE + "/app/reset");
     await ready();
-    check("reset: the page opened without a token says the link is incomplete and offers a new one", (await bodyText()).includes("nuk është e plotë") && (await bodyText()).includes("Kërko lidhje të re"));
+    check("reset: the page opened without a token says the link is incomplete and offers a new one", (await bodyText()).includes("is incomplete") && (await bodyText()).includes("Ask for a new link"));
 
     // And the used link, opened whole, is refused when submitted.
     await open(BASE + linkPath(reset.link));
     await ready();
-    await fill("Fjalëkalimi i ri", "edhe nje fjali e gjate per provë");
-    await fill("Shkruaje përsëri", "edhe nje fjali e gjate per provë");
-    await press("Vendose fjalëkalimin");
+    await fill("New password", "another long sentence for the test");
+    await fill("Repeat it", "another long sentence for the test");
+    await press("Set the password");
     await waitFor(`document.querySelector('main [role=alert]') !== null`, "the refusal of the used link");
-    check("reset: a link that was already used is refused", (await text("main [role=alert]"))?.includes("nuk vlen ose ka skaduar"), await text("main [role=alert]"));
+    check("reset: a link that was already used is refused", (await text("main [role=alert]"))?.includes("not valid or has expired"), await text("main [role=alert]"));
 
-    await goto(BASE + "/app/hyr");
+    await goto(BASE + "/app/sign-in");
     await ready();
-    await fill("Email", EMAIL);
-    await fill("Fjalëkalimi", PASSWORD);
-    await press("Hyr");
+    await fill("E-mail", EMAIL);
+    await fill("Password", PASSWORD);
+    await press("Sign in");
     await waitFor(`document.querySelector('main [role=alert]') !== null`, "the refusal");
     check("sign-in: the old password no longer works", true);
-    await fill("Fjalëkalimi", NEW_PASSWORD);
-    await press("Hyr");
-    await waitFor(`location.pathname === "/app/une"`, "the redirect");
+    await fill("Password", NEW_PASSWORD);
+    await press("Sign in");
+    await waitFor(`location.pathname === "/app/settings"`, "the redirect");
     check("sign-in: the new password works", true);
 
     /* ---------- the planner itself is unaffected ---------- */
     await goto(BASE + "/app/");
     await ready();
-    check("the planner opens as before for a signed-in person", (await text("h1")) === "Sot");
+    check("the planner opens as before for a signed-in person", (await text("h1")) === "Today");
 
     check("no errors in the browser console", browser.result.consoleErrors.length === 0, browser.result.consoleErrors.slice(0, 3));
 }, (mkdirSync(path.join(HERE, "results"), { recursive: true }), path.join(HERE, "results", "app-accounts.json")));

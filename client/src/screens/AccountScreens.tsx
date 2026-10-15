@@ -546,6 +546,9 @@ export function AccountPanel() {
             )}
             {state.status === "signedIn" && (
                 <>
+                    <p data-testid="account-summary">
+                        <span className="font-semibold">{state.user.name}</span> · <span className="text-muted">{state.user.email}</span>
+                    </p>
                     {!state.user.emailVerified && (
                         <Notice look="warn" title="Your e-mail is not confirmed">
                             <p className="text-sm">The AI opens once you confirm it.</p>

@@ -132,7 +132,7 @@ await browser.run(async () => {
         await tabA.goto(BASE + "/");
         await tabA.evaluate(`localStorage.setItem("studyflow_users", ${JSON.stringify("[" + user + "]")}); localStorage.setItem("studyflow_current_user", ${JSON.stringify(user)});`);
 
-        await Promise.all([tabA.goto(BASE + "/app/une"), tabB.goto(BASE + "/app/une")]);
+        await Promise.all([tabA.goto(BASE + "/app/settings"), tabB.goto(BASE + "/app/settings")]);
         const state = (tab) => tab.evaluate(`({ state: document.querySelector('[data-testid="status"]')?.dataset.state, migration: document.querySelector('[data-testid="migration"]')?.dataset.status, plans: document.querySelector('[data-testid="plans"]')?.textContent })`);
         await Promise.all([tabA, tabB].map((tab) => tab.waitFor(`["ready", "failed"].includes(document.querySelector('[data-testid="status"]')?.dataset.state)`, "the app to finish starting")));
         const [a, b] = [await state(tabA), await state(tabB)];
