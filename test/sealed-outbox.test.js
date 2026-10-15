@@ -7,6 +7,9 @@ import { createPool } from "../lib/accounts/postgres/connect.js";
 import { createSmtpTransport } from "../lib/accounts/smtpMail.js";
 import { startPostgres } from "./helpers/embeddedPg.js";
 
+/* The suites that start a real PostgreSQL (the embedded-postgres package) run with `npm run test:pg`; `npm test` stays fast. */
+const PG = process.env.ORARI_PG === "1" || process.env.npm_lifecycle_event === "test:pg";
+
 const SECRET = "a-long-secret-a-long-secret-a-long-secret";
 const LINK = "https://orari.example/app/#token=SECRETTOKENVALUE1234567890";
 const T0 = "2026-10-14T10:00:00.000Z";
@@ -24,7 +27,7 @@ test("a sealed link opens only with the same key and the same message id", () =>
     assert.throws(() => createLinkSealer("short"));
 });
 
-test("the database never holds the usable link; the dispatcher still gets it", async () => {
+test("the database never holds the usable link; the dispatcher still gets it", { skip: !PG }, async () => {
     const db = await startPostgres();
     try {
         const repo = withSealedOutbox(createPostgresAccountsRepository({ pool: db.pool }), createLinkSealer(SECRET));

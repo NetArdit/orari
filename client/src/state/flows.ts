@@ -42,7 +42,7 @@ const fromApi = (failure: ApiFailure): Outcome<never> =>
               },
           };
 
-const STORAGE_FAILED: FlowFailure = { kind: "storage", message: "Plani u krijua, por nuk u ruajt dot në këtë pajisje. Provo përsëri." };
+const STORAGE_FAILED: FlowFailure = { kind: "storage", message: "The plan was created but could not be saved on this device. Try again." };
 
 /**
  * The shared machine. One run at a time: start() while working is refused, which is what stops a
@@ -81,7 +81,7 @@ function createFlow<TInput, TDone>(run: (input: TInput, signal: AbortSignal) => 
                     // Not shown to the person, but kept where a developer can read it: this is the one place an unforeseen
                     // exception in a flow turns into the generic message.
                     console.error("[flow] unexpected error:", error);
-                    return { ok: false, failure: { kind: "server", message: "Ndodhi një gabim i papritur. Provo përsëri." } };
+                    return { ok: false, failure: { kind: "server", message: "Something unexpected went wrong. Try again." } };
                 })
                 .then((outcome) => {
                     if (mine !== runId) return; // cancelled, reset or superseded while it ran
@@ -130,7 +130,7 @@ export function createParseFlow({ api, now = () => new Date(), timeZone = () => 
     return createFlow<string, ParsedResult>(async (text, signal) => {
         const trimmed = text.trim();
         if (trimmed.length < 3) {
-            return { ok: false, failure: { kind: "invalid", message: "Shkruaj pak më shumë për atë që ke për të mësuar.", fields: [{ path: "text", message: "Shkruaj pak më shumë për atë që ke për të mësuar." }] } };
+            return { ok: false, failure: { kind: "invalid", message: "Write a little more about what you want to learn.", fields: [{ path: "text", message: "Write a little more about what you want to learn." }] } };
         }
         const today = clockFrom(now()).today;
         const result = await api.parse({ text: trimmed.slice(0, 2000), clientDate: today, timeZone: timeZone() }, { signal });
@@ -178,7 +178,7 @@ export interface ReplannedResult {
  */
 export function createReplanFlow({ api, store, now = () => new Date(), newId }: FlowDeps) {
     return createFlow<{ planId: string; profile: Pick<StoredProfile, "name" | "educationLevel"> }, ReplannedResult>(async ({ planId, profile }, signal) => {
-        const gone: Outcome<never> = { ok: false, failure: { kind: "gone", message: "Ky plan nuk është më në këtë pajisje." } };
+        const gone: Outcome<never> = { ok: false, failure: { kind: "gone", message: "This plan is no longer on this device." } };
         const before = store.getPlan(planId);
         if (!before) return gone;
 
@@ -191,7 +191,7 @@ export function createReplanFlow({ api, store, now = () => new Date(), newId }: 
         if (!current) return gone;
 
         const merged = mergeReplan(current, result.data, clockFrom(now()), newId);
-        if (!(await store.savePlan(merged.plan))) return { ok: false, failure: { kind: "storage", message: "Plani i ri nuk u ruajt dot në këtë pajisje. Plani yt i mëparshëm është i paprekur." } };
+        if (!(await store.savePlan(merged.plan))) return { ok: false, failure: { kind: "storage", message: "The new plan could not be saved on this device. Your previous plan is untouched." } };
         return { ok: true, result: { planId, replaced: merged.replaced, added: merged.added, alreadyOver: merged.alreadyOver, warnings: merged.plan.warnings } };
     }, () => now().getTime());
 }

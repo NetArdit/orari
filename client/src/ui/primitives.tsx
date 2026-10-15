@@ -93,7 +93,7 @@ export function TimeRange({ session, className = "" }: { session: Pick<StoredSes
         <span className={`font-time tabular-nums ${className}`}>
             {session.startTime}
             <span aria-hidden="true">–</span>
-            <span className="sr-only"> deri në </span>
+            <span className="sr-only"> until </span>
             {session.endTime}
         </span>
     );
@@ -151,14 +151,14 @@ export function AccountRecovery({ kind }: { kind: string }) {
     if (kind === "unauthenticated" || kind === "invalid_credentials") {
         return (
             <p className="text-sm">
-                <Link to={{ name: "signIn" }} className="font-semibold underline underline-offset-2">Hyr në llogari</Link>
+                <Link to={{ name: "signIn" }} className="font-semibold underline underline-offset-2">Sign in</Link>
             </p>
         );
     }
     if (kind === "unverified") {
         return (
             <p className="text-sm">
-                <Link to={{ name: "me" }} className="font-semibold underline underline-offset-2">Hap cilësimet për të konfirmuar email-in</Link>
+                <Link to={{ name: "me" }} className="font-semibold underline underline-offset-2">Open settings to confirm your e-mail</Link>
             </p>
         );
     }

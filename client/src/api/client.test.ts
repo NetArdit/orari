@@ -79,7 +79,7 @@ describe("failures are sorted into kinds the screens can act on", () => {
     };
 
     test("validation: the server's code, message and fields are passed on", async () => {
-        const fields = [{ path: "structured.endDate", message: "Data nuk është e vlefshme." }];
+        const fields = [{ path: "structured.endDate", message: "The date is not valid." }];
         const result = await failing(json(400, { code: "VALIDATION", error: "Datat e planit nuk janë valide.", fields }));
         expect(result).toEqual({ ok: false, kind: "validation", status: 400, code: "VALIDATION", message: "Datat e planit nuk janë valide.", fields });
     });
@@ -148,7 +148,7 @@ describe("failures are sorted into kinds the screens can act on", () => {
 
     test("an unexpected status is a server failure with a message of our own", async () => {
         const result = await failing(json(500, {}));
-        expect(result).toEqual({ ok: false, kind: "server", status: 500, message: "Ndodhi një gabim i papritur. Provo përsëri." });
+        expect(result).toEqual({ ok: false, kind: "server", status: 500, message: "Something unexpected went wrong. Try again." });
     });
 
     test("an answer that is not JSON never throws", async () => {
@@ -204,12 +204,12 @@ describe("failures are sorted into kinds the screens can act on", () => {
         }
     });
 
-    test("no connection is offline, in Albanian", async () => {
+    test("no connection is offline, in English", async () => {
         const { fetchFn } = fakeFetch(() => {
             throw new TypeError("Failed to fetch");
         });
         const result = await createApiClient({ fetch: fetchFn }).createPlan(PLAN_REQUEST);
-        expect(result).toEqual({ ok: false, kind: "offline", message: "Nuk u lidhëm dot me serverin. Kontrollo internetin dhe provo përsëri." });
+        expect(result).toEqual({ ok: false, kind: "offline", message: "Could not reach the server. Check your internet connection and try again." });
     });
 });
 
@@ -245,7 +245,7 @@ describe("plan jobs", () => {
     });
 
     test("a failed job carries the direct route's error through, with its kind, message and fields", async () => {
-        const fields = [{ path: "structured.endDate", message: "Data nuk është e vlefshme." }];
+        const fields = [{ path: "structured.endDate", message: "The date is not valid." }];
         const server = jobServer({ status: "failed", result: { status: 400, body: { code: "VALIDATION", error: "Datat e planit nuk janë valide.", fields } } }, 0);
         const result = await createApiClient({ fetch: server.fetchFn, pollMs: 1 }).createPlan(PLAN_REQUEST);
         expect(result).toEqual({ ok: false, kind: "validation", status: 400, code: "VALIDATION", message: "Datat e planit nuk janë valide.", fields });

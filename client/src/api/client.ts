@@ -82,21 +82,21 @@ export interface JobSnapshot {
 }
 
 const FALLBACK: Record<ApiFailureKind, string> = {
-    validation: "Disa të dhëna nuk janë në rregull.",
-    rate_limited: "Ke bërë shumë kërkesa njëra pas tjetrës. Prit pak minuta dhe provo përsëri.",
-    busy: "Shërbimi është i zënë për momentin. Provo përsëri pas pak.",
-    provider_unavailable: "Shërbimi AI nuk është i disponueshëm për momentin. Provo më vonë.",
-    timeout: "AI po vonon më shumë se zakonisht. Provo përsëri pas pak.",
-    aborted: "Kërkesa u ndal.",
-    not_configured: "AI nuk është konfiguruar ende.",
-    ai_failed: "AI nuk mundi ta krijojë planin. Provo përsëri.",
-    offline: "Nuk u lidhëm dot me serverin. Kontrollo internetin dhe provo përsëri.",
-    unauthenticated: "Duhet të hysh në llogari.",
-    invalid_credentials: "Email-i ose fjalëkalimi nuk është i saktë.",
-    unverified: "Konfirmo email-in që të përdorësh sinkronizimin dhe AI-n.",
-    conflict: "Kjo u ndryshua diku tjetër. Po e shfaqim versionin e fundit.",
-    forbidden: "Kërkesa nuk u pranua nga kjo faqe.",
-    server: "Ndodhi një gabim i papritur. Provo përsëri.",
+    validation: "Some of the details are not right.",
+    rate_limited: "You have made too many requests in a row. Wait a few minutes and try again.",
+    busy: "The service is busy right now. Try again in a moment.",
+    provider_unavailable: "The AI service is not available right now. Try again later.",
+    timeout: "The AI is taking longer than usual. Try again in a moment.",
+    aborted: "The request was stopped.",
+    not_configured: "The AI is not configured yet.",
+    ai_failed: "The AI could not create the plan. Try again.",
+    offline: "Could not reach the server. Check your internet connection and try again.",
+    unauthenticated: "You need to sign in.",
+    invalid_credentials: "The e-mail or password is not correct.",
+    unverified: "Confirm your e-mail to use the AI.",
+    conflict: "This was changed elsewhere. Showing the latest version.",
+    forbidden: "The request was not accepted from this page.",
+    server: "Something unexpected went wrong. Try again.",
 };
 
 /** Every code the server can send, and what the screens should do about it. A new server code will not compile until it is placed here. */
@@ -379,6 +379,9 @@ export function createApiClient({
             forgotPassword: (email: string, options: RequestOptions = {}) => request<{ ok: true }>("POST", "/api/account/password/forgot", { email }, timeoutMs, options),
             resetPassword: (input: { token: string; newPassword: string }, options: RequestOptions = {}) =>
                 request<{ ok: true }>("POST", "/api/account/password/reset", input, timeoutMs, options),
+            updateName: (name: string, options: RequestOptions = {}) => request<{ ok: true; user: AccountUser }>("POST", "/api/account/profile", { name }, timeoutMs, options),
+            changeEmail: (input: { newEmail: string; currentPassword: string }, options: RequestOptions = {}) =>
+                request<{ ok: true; status: "check_email" }>("POST", "/api/account/email/change", input, timeoutMs, options),
             changePassword: (input: { currentPassword: string; newPassword: string }, options: RequestOptions = {}) =>
                 request<{ ok: true }>("POST", "/api/account/password/change", input, timeoutMs, options),
             sessions: (options: RequestOptions = {}) => request<{ sessions: AccountSession[] }>("GET", "/api/account/sessions", undefined, timeoutMs, options),

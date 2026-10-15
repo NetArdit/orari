@@ -17,7 +17,7 @@ export function escapeText(value: string): string {
 
 /**
  * RFC 5545 section 3.1: lines longer than 75 octets are continued on the next line after a space.
- * Counted in UTF-8 bytes, never cutting a character in half (Albanian ë and ç take two bytes each).
+ * Counted in UTF-8 bytes, never cutting a character in half (letters such as ë and ç take two bytes each).
  */
 export function foldLine(line: string): string {
     const encoder = new TextEncoder();

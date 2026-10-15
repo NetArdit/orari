@@ -114,18 +114,18 @@ export function normaliseTime(input: string): string | null {
 export type BuildResult = { ok: true; structured: CreatePlanRequest["structured"] } | { ok: false; errors: FieldError[] };
 
 const MESSAGES = {
-    required: "Plotëso këtë fushë.",
-    date: "Data nuk është e vlefshme.",
-    order: "Data e mbarimit duhet të jetë pas datës së fillimit.",
-    tooLong: "Plani mund të zgjasë më së shumti 180 ditë.",
-    time: "Shkruaje orën në formatin 08:30.",
-    windowOrder: "Koha e përfundimit duhet të jetë pas kohës së fillimit.",
-    sameTime: "Fillimi dhe mbarimi nuk mund të jenë e njëjta orë.",
-    overlap: "Kjo kohë mbivendoset me një tjetër në të njëjtën ditë.",
-    tooMany: "Ke shtuar më shumë se sa lejohet.",
-    minutes: "Zgjidh një kohëzgjatje nga 10 deri në 240 minuta.",
-    noFreeDay: "Të paktën një ditë duhet të mbetet për mësim.",
-    noStudyDate: "Në këtë periudhë nuk mbetet asnjë ditë për mësim. Ndrysho datat, ditët e lira ose ditët pa mësim.",
+    required: "Fill in this field.",
+    date: "The date is not valid.",
+    order: "The end date must be after the start date.",
+    tooLong: "A plan can last at most 180 days.",
+    time: "Write the time like 08:30.",
+    windowOrder: "The end time must be after the start time.",
+    sameTime: "The start and the end cannot be the same time.",
+    overlap: "This time overlaps another one on the same day.",
+    tooMany: "You added more than is allowed.",
+    minutes: "Choose a length from 10 to 240 minutes.",
+    noFreeDay: "At least one day must be left for study.",
+    noStudyDate: "No day is left for study in this period. Change the dates, the free days or the days without study.",
 } as const;
 
 const WEEKDAY_OF_UTC_DAY: readonly Weekday[] = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];

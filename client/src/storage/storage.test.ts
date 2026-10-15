@@ -273,7 +273,7 @@ describe("the look chosen on this device", () => {
     test("a damaged record reads as the defaults field by field, and saving cleans what is written", async () => {
         const store = createMemoryStore({ appearance: { layoutStyle: "blocks", colorMode: "purple", extra: 1 } });
         const repo = createRepository(store, fixedNow);
-        expect(await repo.getAppearance()).toEqual({ layoutStyle: "blocks", colorMode: "system" });
+        expect(await repo.getAppearance()).toEqual({ layoutStyle: "notebook", colorMode: "light" });
 
         await repo.saveAppearance({ layoutStyle: "nope", colorMode: "light" } as never);
         expect(store.dump().appearance).toEqual({ layoutStyle: "notebook", colorMode: "light" });
@@ -488,7 +488,7 @@ describe("converting an old user", () => {
     test("missing pieces get safe values: no name, no ids, no dates, no plans", () => {
         let n = 0;
         const result = convertLegacyUser({ plans: [{ ...plan("x"), id: undefined, createdAt: undefined, structured: "broken" }] }, () => `id-${++n}`, fixedNow);
-        expect(result.profile).toEqual({ id: "id-1", name: "Pa emër", educationLevel: null, school: "", createdAt: NOW.toISOString() });
+        expect(result.profile).toEqual({ id: "id-1", name: "No name", educationLevel: null, school: "", createdAt: NOW.toISOString() });
         expect(result.plans[0]).toMatchObject({ id: "id-2", createdAt: NOW.toISOString(), structured: {} });
         expect(convertLegacyUser({}, () => "id", fixedNow).plans).toEqual([]);
     });

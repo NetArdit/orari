@@ -2,35 +2,30 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import { runInNewContext } from "node:vm";
 import { describe, expect, test } from "vitest";
-import { APPEARANCE_CACHE_KEY, applyAppearance, COLOR_MODES, DEFAULT_APPEARANCE, LAYOUT_STYLES, parseAppearance, readCachedAppearance, resolveTheme, writeCachedAppearance } from "./appearance.ts";
+import { APPEARANCE_CACHE_KEY, applyAppearance, COLOR_MODES, DEFAULT_APPEARANCE, LOOKS, parseAppearance, readCachedAppearance, resolveTheme, writeCachedAppearance } from "./appearance.ts";
 
-describe("the stored values", () => {
-    test("two styles and three modes, with these exact stored names", () => {
-        expect([...LAYOUT_STYLES]).toEqual(["notebook", "blocks"]);
-        expect([...COLOR_MODES]).toEqual(["system", "light", "dark"]);
-        expect(DEFAULT_APPEARANCE).toEqual({ layoutStyle: "notebook", colorMode: "system" });
+describe("the two looks", () => {
+    test("light mode is the notebook layout in light colours; dark mode is the blocks layout in dark colours", () => {
+        expect([...COLOR_MODES]).toEqual(["light", "dark"]);
+        expect(LOOKS.light).toEqual({ layoutStyle: "notebook", colorMode: "light" });
+        expect(LOOKS.dark).toEqual({ layoutStyle: "blocks", colorMode: "dark" });
+        expect(DEFAULT_APPEARANCE).toEqual(LOOKS.light);
     });
 
-    test("anything is read as something usable; each field falls back on its own", () => {
-        expect(parseAppearance({ layoutStyle: "blocks", colorMode: "dark" })).toEqual({ layoutStyle: "blocks", colorMode: "dark" });
-        expect(parseAppearance({ layoutStyle: "blocks", colorMode: "purple" })).toEqual({ layoutStyle: "blocks", colorMode: "system" });
-        expect(parseAppearance({ layoutStyle: 5, colorMode: "light" })).toEqual({ layoutStyle: "notebook", colorMode: "light" });
+    test("anything is read as one of the two looks; only an explicit dark gives dark", () => {
+        expect(parseAppearance({ layoutStyle: "blocks", colorMode: "dark" })).toEqual(LOOKS.dark);
+        expect(parseAppearance({ layoutStyle: "notebook", colorMode: "dark" })).toEqual(LOOKS.dark);
+        expect(parseAppearance({ layoutStyle: "blocks", colorMode: "light" })).toEqual(LOOKS.light);
+        // an older stored choice ("system") and plain junk are light mode
+        expect(parseAppearance({ layoutStyle: "blocks", colorMode: "system" })).toEqual(LOOKS.light);
         for (const junk of [null, undefined, "dark", 7, [], {}, { layoutStyle: {}, colorMode: [] }]) {
-            expect(parseAppearance(junk)).toEqual(DEFAULT_APPEARANCE);
+            expect(parseAppearance(junk)).toEqual(LOOKS.light);
         }
     });
 
-    test("labels are not stored values: a stored label is not accepted", () => {
-        expect(parseAppearance({ layoutStyle: "Fletore", colorMode: "E errët" })).toEqual(DEFAULT_APPEARANCE);
-    });
-});
-
-describe("system mode follows the device", () => {
-    test("light and dark are fixed; system takes the device's preference", () => {
+    test("the theme is the colour mode, whatever the device prefers", () => {
         expect(resolveTheme("light", true)).toBe("light");
         expect(resolveTheme("dark", false)).toBe("dark");
-        expect(resolveTheme("system", true)).toBe("dark");
-        expect(resolveTheme("system", false)).toBe("light");
     });
 });
 
@@ -42,11 +37,11 @@ describe("the device's cached choice", () => {
 
     test("what is written is read back", () => {
         const storage = memory();
-        writeCachedAppearance(storage, { layoutStyle: "blocks", colorMode: "dark" });
-        expect(readCachedAppearance(storage)).toEqual({ layoutStyle: "blocks", colorMode: "dark" });
+        writeCachedAppearance(storage, LOOKS.dark);
+        expect(readCachedAppearance(storage)).toEqual(LOOKS.dark);
     });
 
-    test("nothing cached, damaged JSON, or storage that throws: the defaults, and no exception", () => {
+    test("nothing cached, damaged JSON, or storage that throws: light mode, and no exception", () => {
         expect(readCachedAppearance(memory())).toEqual(DEFAULT_APPEARANCE);
         expect(readCachedAppearance(memory("{not json"))).toEqual(DEFAULT_APPEARANCE);
         expect(readCachedAppearance(null)).toEqual(DEFAULT_APPEARANCE);
@@ -64,9 +59,9 @@ describe("the device's cached choice", () => {
 describe("applying to the page", () => {
     test("sets the two attributes the stylesheet reads", () => {
         const root = { dataset: {} as Record<string, string | undefined> };
-        expect(applyAppearance(root, { layoutStyle: "blocks", colorMode: "system" }, true)).toBe("dark");
+        expect(applyAppearance(root, LOOKS.dark, false)).toBe("dark");
         expect(root.dataset).toEqual({ style: "blocks", theme: "dark" });
-        applyAppearance(root, { layoutStyle: "notebook", colorMode: "light" }, true);
+        applyAppearance(root, LOOKS.light, true);
         expect(root.dataset).toEqual({ style: "notebook", theme: "light" });
     });
 });
@@ -74,23 +69,18 @@ describe("applying to the page", () => {
 describe("public/theme-init.js, the pre-paint copy of these rules", () => {
     const source = readFileSync(path.join(import.meta.dirname, "..", "..", "public", "theme-init.js"), "utf8");
 
-    function run(cached: string | null, prefersDark: boolean, storageThrows = false) {
+    function run(cached: string | null, storageThrows = false) {
         const dataset: Record<string, string> = {};
-        const window = {
-            localStorage: { getItem: () => (storageThrows ? (() => { throw new Error("blocked"); })() : cached) },
-            matchMedia: () => ({ matches: prefersDark }),
-        };
+        const window = { localStorage: { getItem: () => (storageThrows ? (() => { throw new Error("blocked"); })() : cached) } };
         runInNewContext(source, { window, document: { documentElement: { dataset } }, JSON });
         return dataset;
     }
 
-    test("gives the same answer as the module for every stored combination and device preference", () => {
-        for (const layoutStyle of LAYOUT_STYLES) {
-            for (const colorMode of COLOR_MODES) {
-                for (const prefersDark of [false, true]) {
-                    const expected = { style: layoutStyle, theme: resolveTheme(colorMode, prefersDark) };
-                    expect(run(JSON.stringify({ layoutStyle, colorMode }), prefersDark)).toEqual(expected);
-                }
+    test("gives the same answer as the module for every stored combination", () => {
+        for (const layoutStyle of ["notebook", "blocks"]) {
+            for (const colorMode of ["light", "dark", "system"]) {
+                const a = parseAppearance({ layoutStyle, colorMode });
+                expect(run(JSON.stringify({ layoutStyle, colorMode }))).toEqual({ style: a.layoutStyle, theme: a.colorMode });
             }
         }
     });
@@ -98,21 +88,18 @@ describe("public/theme-init.js, the pre-paint copy of these rules", () => {
     test("gives the same answer for missing, damaged and partly wrong data", () => {
         const cases: (string | null)[] = [null, "{bad", "null", "[]", JSON.stringify({ layoutStyle: "blocks" }), JSON.stringify({ colorMode: "dark" }), JSON.stringify({ layoutStyle: "x", colorMode: "y" })];
         for (const cached of cases) {
-            for (const prefersDark of [false, true]) {
-                let value: unknown = null;
-                try {
-                    value = cached === null ? null : JSON.parse(cached);
-                } catch {
-                    value = null;
-                }
-                const a = parseAppearance(value);
-                expect(run(cached, prefersDark)).toEqual({ style: a.layoutStyle, theme: resolveTheme(a.colorMode, prefersDark) });
+            let value: unknown = null;
+            try {
+                value = cached === null ? null : JSON.parse(cached);
+            } catch {
+                value = null;
             }
+            const a = parseAppearance(value);
+            expect(run(cached)).toEqual({ style: a.layoutStyle, theme: a.colorMode });
         }
     });
 
-    test("blocked storage gives the defaults", () => {
-        expect(run(null, false, true)).toEqual({ style: "notebook", theme: "light" });
-        expect(run(null, true, true)).toEqual({ style: "notebook", theme: "dark" });
+    test("blocked storage gives light mode", () => {
+        expect(run(null, true)).toEqual({ style: "notebook", theme: "light" });
     });
 });

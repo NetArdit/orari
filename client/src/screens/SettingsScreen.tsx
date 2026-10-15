@@ -1,83 +1,53 @@
 import { useServices } from "../app/services.tsx";
-import { COLOR_MODES, LAYOUT_LABELS, LAYOUT_STYLES, MODE_LABELS } from "../settings/appearance.ts";
+import { LOOKS } from "../settings/appearance.ts";
 import { ScreenTitle } from "../ui/primitives.tsx";
-import { AccountPanel } from "./AccountScreens.tsx";
-import type { MigrationOutcome } from "../storage/legacy.ts";
+import { AccountPanel, LogOutButton } from "./AccountScreens.tsx";
 
-export interface DeviceInfo {
-    migration: MigrationOutcome;
-    profileName: string | null;
-    unreadablePlans: number;
-    aiConfigured: boolean | null;
+function SunIcon() {
+    return (
+        <svg aria-hidden="true" viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+            <circle cx="12" cy="12" r="4" />
+            <path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" />
+        </svg>
+    );
 }
 
-function migrationText(outcome: MigrationOutcome): string {
-    switch (outcome.status) {
-        case "migrated":
-            return `Të dhënat nga versioni i vjetër u kopjuan: ${outcome.plans} plane.`;
-        case "already_set_up":
-            return "Të dhënat janë tashmë në këtë pajisje.";
-        case "nothing_to_migrate":
-            return "Nuk ka të dhëna nga versioni i vjetër.";
-        case "choose":
-            return "Në këtë pajisje ka disa llogari të vjetra. Duhet zgjedhur njëra.";
-        case "unreadable":
-            return "Të dhënat e versionit të vjetër nuk mund të lexohen.";
-    }
+function MoonIcon() {
+    return (
+        <svg aria-hidden="true" viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z" />
+        </svg>
+    );
 }
 
-export function SettingsScreen({ device, planCount }: { device: DeviceInfo; planCount: number }) {
+/** Account first, then the look, and log out last. */
+export function SettingsScreen() {
     const { appearance, setAppearance } = useServices();
+    const dark = appearance.colorMode === "dark";
 
     return (
         <>
-            <ScreenTitle title="Cilësimet" />
+            <ScreenTitle title="Settings" />
 
             <AccountPanel />
 
-            <fieldset className="flex flex-col gap-3">
-                <legend className="mb-1 text-lg font-semibold">Stili</legend>
-                <div className="grid gap-3 sm:grid-cols-2">
-                    {LAYOUT_STYLES.map((style) => (
-                        <label key={style} className="flex cursor-pointer flex-col gap-1 rounded-m border border-control bg-raised p-4 has-[:checked]:border-accent has-[:checked]:bg-accent-wash has-[:focus-visible]:outline has-[:focus-visible]:outline-[3px] has-[:focus-visible]:outline-accent">
-                            <span className="flex items-center gap-2 font-semibold">
-                                <input type="radio" name="layoutStyle" value={style} checked={appearance.layoutStyle === style} onChange={() => setAppearance({ ...appearance, layoutStyle: style })} className="size-4 accent-[var(--accent)]" />
-                                {LAYOUT_LABELS[style].name}
-                            </span>
-                            <span className="text-[13px] text-muted">{LAYOUT_LABELS[style].about}</span>
-                        </label>
-                    ))}
-                </div>
-            </fieldset>
-
-            <fieldset className="flex flex-col gap-3">
-                <legend className="mb-1 text-lg font-semibold">Pamja</legend>
-                <div className="flex flex-wrap gap-2">
-                    {COLOR_MODES.map((mode) => (
-                        <label key={mode} className="flex min-h-11 cursor-pointer items-center gap-2 rounded-full border border-control bg-raised px-4 font-semibold has-[:checked]:border-accent has-[:checked]:bg-accent-wash has-[:focus-visible]:outline has-[:focus-visible]:outline-[3px] has-[:focus-visible]:outline-accent">
-                            <input type="radio" name="colorMode" value={mode} checked={appearance.colorMode === mode} onChange={() => setAppearance({ ...appearance, colorMode: mode })} className="size-4 accent-[var(--accent)]" />
-                            {MODE_LABELS[mode]}
-                        </label>
-                    ))}
-                </div>
-                <p className="text-[13px] text-muted">"Si pajisja" ndjek cilësimin e secilës pajisje, kështu që telefoni dhe kompjuteri mund të dalin ndryshe.</p>
-            </fieldset>
-
-            <section aria-label="Të dhënat në këtë pajisje" className="flex flex-col gap-2 rounded-m bg-sunk p-4" data-testid="status" data-state="ready">
-                <h2 className="text-lg font-semibold">Të dhënat në këtë pajisje</h2>
-                <ul className="list-disc pl-5 text-sm">
-                    <li data-testid="migration" data-status={device.migration.status}>
-                        {migrationText(device.migration)}
-                    </li>
-                    <li data-testid="profile">Profili: {device.profileName ?? "ende pa profil"}</li>
-                    <li data-testid="plans">
-                        Plane në këtë pajisje: {planCount}
-                        {device.unreadablePlans > 0 ? ` (${device.unreadablePlans} nuk lexohen)` : ""}
-                    </li>
-                    <li data-testid="server">Serveri: {device.aiConfigured === null ? "nuk përgjigjet" : device.aiConfigured ? "gati, me AI" : "gati, pa çelës AI"}</li>
-                </ul>
-                <p className="text-[13px] text-muted">Plani yt ruhet në këtë pajisje. Me një llogari mund ta kopjosh edhe në pajisje të tjera.</p>
+            <section aria-label="Appearance" className="flex flex-col gap-3">
+                <h2 className="text-lg font-semibold">Appearance</h2>
+                <button
+                    type="button"
+                    role="switch"
+                    aria-checked={dark}
+                    aria-label="Dark mode"
+                    data-testid="theme-toggle"
+                    onClick={() => setAppearance(dark ? LOOKS.light : LOOKS.dark)}
+                    className="flex min-h-11 w-fit items-center gap-3 rounded-full border border-control bg-raised px-4 font-semibold focus-visible:outline focus-visible:outline-[3px] focus-visible:outline-accent"
+                >
+                    {dark ? <MoonIcon /> : <SunIcon />}
+                    <span>{dark ? "Dark mode" : "Light mode"}</span>
+                </button>
             </section>
+
+            <LogOutButton />
         </>
     );
 }

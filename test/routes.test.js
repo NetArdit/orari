@@ -113,19 +113,19 @@ describe("health, static files and generic errors", () => {
     test("an unknown API path answers 404 as JSON", async () => {
         const res = await fetch(base + "/api/nope");
         assert.equal(res.status, 404);
-        assert.equal((await res.json()).error, "API endpoint nuk u gjet.");
+        assert.equal((await res.json()).error, "API endpoint not found.");
     });
 
     test("malformed JSON answers 400", async () => {
         const { status, json } = await post(base, "/api/parse", "{bad", true);
         assert.equal(status, 400);
-        assert.equal(json.error, "Kërkesa nuk është JSON valid.");
+        assert.equal(json.error, "The request is not valid JSON.");
     });
 
     test("a body over 100 kB answers 413", async () => {
         const { status, json } = await post(base, "/api/parse", { text: "a".repeat(150_000) });
         assert.equal(status, 413);
-        assert.equal(json.error, "Kërkesa është shumë e madhe.");
+        assert.equal(json.error, "The request is too large.");
     });
 });
 
@@ -233,7 +233,7 @@ describe("the new client at /app, beside the old page", () => {
     test("an address with a malformed escape does not crash the server", async () => {
         const inApp = await rawGet("/app/%E0%A4%A");
         assert.equal(inApp.status, 400);
-        assert.deepEqual(JSON.parse(inApp.body), { code: "BAD_REQUEST", error: "Kërkesa nuk është e vlefshme." });
+        assert.deepEqual(JSON.parse(inApp.body), { code: "BAD_REQUEST", error: "The request is not valid." });
         // Outside /app no route tries to read the broken part, so these are simply not found.
         for (const address of ["/%E0%A4%A", "/api/%E0%A4%A"]) {
             assert.ok([400, 404].includes((await rawGet(address)).status), address);
@@ -286,7 +286,7 @@ describe("P0-5: protecting the shared AI quota", () => {
             for (const path of ["/api/parse", "/api/create-plan", "/api/adjust-plan"]) {
                 const res = await fetch(limited.base + path, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text: "abc def" }) });
                 assert.equal(res.status, 429, path);
-                assert.equal((await res.json()).error, "Ke bërë shumë kërkesa njëra pas tjetrës. Prit pak minuta dhe provo përsëri.");
+                assert.equal((await res.json()).error, "You have made too many requests in a row. Wait a few minutes and try again.");
                 assert.ok(res.headers.get("retry-after"), "says when to come back");
             }
 
@@ -309,7 +309,7 @@ describe("P0-5: protecting the shared AI quota", () => {
             const second = await fetch(capped.base + "/api/parse", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text: "abc def" }) });
             assert.equal(second.status, 503);
             assert.equal(second.headers.get("retry-after"), "15");
-            assert.equal((await second.json()).error, "Shërbimi është i zënë për momentin. Provo përsëri pas pak.");
+            assert.equal((await second.json()).error, "The service is busy right now. Try again in a moment.");
             assert.equal(fake.parseCalls.length, 1);
 
             finishFirst();
@@ -347,7 +347,7 @@ describe("without an API key", () => {
         for (const path of ["/api/parse", "/api/create-plan", "/api/adjust-plan"]) {
             const { status, json } = await post(unconfigured.base, path, {});
             assert.equal(status, 503, path);
-            assert.equal(json.error, "AI nuk është konfiguruar ende.", path);
+            assert.equal(json.error, "The AI is not configured yet.", path);
         }
         assert.equal(fake.parseCalls.length + fake.planCalls.length, 0);
     });
@@ -383,11 +383,11 @@ describe("POST /api/parse", () => {
     test("P1-13: an unknown time zone or an impossible date is refused and names the field", async () => {
         let res = await post(base, "/api/parse", { text: "abc def", timeZone: "Prishtina" });
         assert.equal(res.status, 400);
-        assert.deepEqual(res.json.fields, [{ path: "timeZone", message: "Zona kohore nuk është e vlefshme." }]);
+        assert.deepEqual(res.json.fields, [{ path: "timeZone", message: "The time zone is not valid." }]);
 
         res = await post(base, "/api/parse", { text: "abc def", clientDate: "2026-02-31" });
         assert.equal(res.status, 400);
-        assert.deepEqual(res.json.fields, [{ path: "clientDate", message: "Data nuk është e vlefshme." }]);
+        assert.deepEqual(res.json.fields, [{ path: "clientDate", message: "The date is not valid." }]);
         assert.equal(fake.parseCalls.length, 0);
     });
 
@@ -395,7 +395,7 @@ describe("POST /api/parse", () => {
         for (const body of [{}, { text: "ab" }, { text: "a".repeat(2001) }, { text: 5 }]) {
             const { status, json } = await post(base, "/api/parse", body);
             assert.equal(status, 400);
-            assert.equal(json.error, "Përshkrimi mungon ose është shumë i gjatë/i shkurtër.");
+            assert.equal(json.error, "The description is missing, too long or too short.");
             assert.equal(json.fields[0].path, "text");
         }
         assert.equal(fake.parseCalls.length, 0);
@@ -405,17 +405,17 @@ describe("POST /api/parse", () => {
         fake.parse = async () => ({ ok: false, error: "malformed_json" });
         const { status, json } = await post(base, "/api/parse", { text: "abc def" });
         assert.equal(status, 502);
-        assert.equal(json.error, "AI gjeneroi një përgjigje të pavlefshme gjatë analizimit. Provo përsëri.");
+        assert.equal(json.error, "The AI produced an unusable answer while reading your description. Try again.");
     });
 
     test("provider errors are mapped to safe messages and never leak provider text", async () => {
         const cases = [
-            [401, 503, "AI nuk është konfiguruar ende."],
-            [429, 503, "Shërbimi AI ka arritur kufirin e përdorimit. Provo më vonë."],
-            [402, 503, "Modeli AI nuk është i disponueshëm për momentin."],
-            [400, 502, "AI nuk e pranoi kërkesën. Provo të riformulosh."],
-            [500, 502, "AI nuk mundi ta krijojë planin. Provo përsëri."],
-            [undefined, 502, "AI nuk mundi ta krijojë planin. Provo përsëri."],
+            [401, 503, "The AI is not configured yet."],
+            [429, 503, "The AI service has reached its usage limit. Try again later."],
+            [402, 503, "The AI model is not available right now."],
+            [400, 502, "The AI did not accept the request. Try rewording it."],
+            [500, 502, "The AI could not create the plan. Try again."],
+            [undefined, 502, "The AI could not create the plan. Try again."],
         ];
         for (const [providerStatus, expectedStatus, expectedMessage] of cases) {
             fake.parse = async () => {
@@ -536,7 +536,7 @@ describe("P1-1: deadline and cancellation", () => {
         for (const [path, body] of [["/api/parse", { text: "abc def" }], ["/api/create-plan", createBody()], ["/api/adjust-plan", adjust]]) {
             const { status, json } = await post(base, path, body);
             assert.equal(status, 504, path);
-            assert.equal(json.error, "AI po vonon më shumë se zakonisht. Provo përsëri pas pak.", path);
+            assert.equal(json.error, "The AI is taking longer than usual. Try again in a moment.", path);
         }
     });
 
@@ -638,7 +638,7 @@ describe("POST /api/create-plan", () => {
         assert.equal(status, 200);
         assert.deepEqual(json.sessions.map((s) => s.startTime), ["08:00"]);
         assert.deepEqual(json.stats, { totalSessions: 1, totalMinutes: 60, totalHours: 1 });
-        assert.deepEqual(json.warnings, ["Kujdes", "2 seanca të propozuara nga AI u hoqën, sepse nuk përshtateshin me kohën që ke të lirë."]);
+        assert.deepEqual(json.warnings, ["Kujdes", "2 sessions proposed by the AI were removed because they did not fit the time you have free."]);
     });
 
     test("P1-3: sessions come back in time order, without overlaps and without slivers", async () => {
@@ -662,7 +662,7 @@ describe("POST /api/create-plan", () => {
         for (const body of [{}, missingSubject, createBody({ weeklyAvailability: [{ day: "mon", windows: [{ start: "10:00", end: "09:00" }] }] })]) {
             const { status, json } = await post(base, "/api/create-plan", body);
             assert.equal(status, 400);
-            assert.equal(json.error, "Na mungojnë disa të dhëna për ta krijuar planin.");
+            assert.equal(json.error, "Some details are missing to create the plan.");
             assert.ok(json.fields.length > 0);
         }
         assert.equal(fake.planCalls.length, 0);
@@ -673,8 +673,8 @@ describe("POST /api/create-plan", () => {
         delete body.structured.subject;
         const { json } = await post(base, "/api/create-plan", body);
         assert.deepEqual(json.fields, [
-            { path: "structured.subject", message: "Plotëso këtë fushë." },
-            { path: "structured.weeklyAvailability.0.windows.0.end", message: "Koha e përfundimit duhet të jetë pas kohës së fillimit." },
+            { path: "structured.subject", message: "Fill in this field." },
+            { path: "structured.weeklyAvailability.0.windows.0.end", message: "The end time must be after the start time." },
         ]);
     });
 
@@ -689,9 +689,9 @@ describe("POST /api/create-plan", () => {
 
     test("date rules answer 400 with their own message, without calling the AI", async () => {
         const cases = [
-            [{ startDate: "2026-13-01", endDate: "2026-13-05" }, "Datat e planit nuk janë valide."],
-            [{ startDate: "2026-10-20", endDate: "2026-10-14" }, "Data e fillimit duhet të jetë para datës së mbarimit."],
-            [{ startDate: "2026-01-01", endDate: "2026-07-20" }, "Periudha e planit është shumë e gjatë (maksimumi ~6 muaj)."],
+            [{ startDate: "2026-13-01", endDate: "2026-13-05" }, "The dates of the plan are not valid."],
+            [{ startDate: "2026-10-20", endDate: "2026-10-14" }, "The start date must be before the end date."],
+            [{ startDate: "2026-01-01", endDate: "2026-07-20" }, "The period of the plan is too long (at most about 6 months)."],
         ];
         for (const [dates, message] of cases) {
             const { status, json } = await post(base, "/api/create-plan", createBody(dates));
@@ -706,8 +706,8 @@ describe("POST /api/create-plan", () => {
         assert.equal(status, 400);
         assert.deepEqual(json, {
             code: "VALIDATION",
-            error: "Datat e planit nuk janë valide.",
-            fields: [{ path: "structured.startDate", message: "Data nuk është e vlefshme." }],
+            error: "The dates of the plan are not valid.",
+            fields: [{ path: "structured.startDate", message: "The date is not valid." }],
         });
         assert.equal(fake.planCalls.length, 0);
     });
@@ -716,7 +716,7 @@ describe("POST /api/create-plan", () => {
         const body = createBody({ weeklyAvailability: [{ day: "wed", off: true }, { day: "thu", off: true }] });
         const { status, json } = await post(base, "/api/create-plan", body);
         assert.equal(status, 400);
-        assert.equal(json.error, "Nuk gjenden dritare kohore të lira në periudhën e zgjedhur. Kontrollo disponueshmërinë dhe angazhimet.");
+        assert.equal(json.error, "There are no free time windows in the chosen period. Check your availability and commitments.");
         assert.equal(fake.planCalls.length, 0);
     });
 
@@ -724,27 +724,27 @@ describe("POST /api/create-plan", () => {
         fake.plan = async () => ({ ok: true, data: planData([planSession("2026-10-14", "03:00", "04:00")]) });
         const { status, json } = await post(base, "/api/create-plan", createBody());
         assert.equal(status, 502);
-        assert.equal(json.error, "AI nuk arriti të vendoste asnjë seancë në kohën që ke të lirë. Provo përsëri.");
+        assert.equal(json.error, "The AI could not place any session in the time you have free. Try again.");
     });
 
     test("P1-4: one removed session is reported in the singular", async () => {
         fake.plan = async () => ({ ok: true, data: planData([planSession("2026-10-14", "03:00", "04:00"), planSession("2026-10-14", "08:00", "09:00")], { warnings: [] }) });
         const { json } = await post(base, "/api/create-plan", createBody());
-        assert.deepEqual(json.warnings, ["1 seancë e propozuar nga AI u hoq, sepse nuk përshtatej me kohën që ke të lirë."]);
+        assert.deepEqual(json.warnings, ["1 session proposed by the AI was removed because it did not fit the time you have free."]);
     });
 
     test("an unusable AI answer gives 502; a provider error is mapped", async () => {
         fake.plan = async () => ({ ok: false, error: "schema_validation_failed" });
         let res = await post(base, "/api/create-plan", createBody());
         assert.equal(res.status, 502);
-        assert.equal(res.json.error, "AI gjeneroi një plan të paplotë. Provo përsëri.");
+        assert.equal(res.json.error, "The AI produced an incomplete plan. Try again.");
 
         fake.plan = async () => {
             throw Object.assign(new Error("rate limited upstream"), { status: 429 });
         };
         res = await post(base, "/api/create-plan", createBody());
         assert.equal(res.status, 503);
-        assert.equal(res.json.error, "Shërbimi AI ka arritur kufirin e përdorimit. Provo më vonë.");
+        assert.equal(res.json.error, "The AI service has reached its usage limit. Try again later.");
     });
 });
 
@@ -787,14 +787,14 @@ describe("POST /api/adjust-plan", () => {
         assert.deepEqual(input.adaptation.completed, ["2026-10-10 Hyrje (completed)"]);
         assert.deepEqual(input.adaptation.missed, ["2026-10-12 Ushtrime"]);
         assert.equal(input.adaptation.remainingMaterialNote, "Kapitulli 5");
-        assert.match(input.adaptation.instruction, /^Rishpërndaj vetëm materialin e mbetur\./);
+        assert.match(input.adaptation.instruction, /^Redistribute only the material that remains\./);
     });
 
     test("invalid bodies answer 400 without calling the AI", async () => {
         for (const body of [{}, createBody(), adjustBody({ today: "sot" })]) {
             const { status, json } = await post(base, "/api/adjust-plan", body);
             assert.equal(status, 400);
-            assert.equal(json.error, "Na mungojnë disa të dhëna për ta rregulluar planin.");
+            assert.equal(json.error, "Some details are missing to rearrange the plan.");
             assert.ok(json.fields.length > 0);
         }
         assert.equal(fake.planCalls.length, 0);
@@ -804,26 +804,26 @@ describe("POST /api/adjust-plan", () => {
         fake.plan = async () => ({ ok: true, data: planData([planSession("2026-10-15", "03:00", "04:00"), planSession("2026-10-15", "08:00", "09:00")]) });
         let res = await post(base, "/api/adjust-plan", adjustBody());
         assert.equal(res.status, 200);
-        assert.deepEqual(res.json.warnings, ["Kujdes", "1 seancë e propozuar nga AI u hoq, sepse nuk përshtatej me kohën që ke të lirë."]);
+        assert.deepEqual(res.json.warnings, ["Kujdes", "1 session proposed by the AI was removed because it did not fit the time you have free."]);
 
         fake.plan = async () => ({ ok: true, data: planData([planSession("2026-10-15", "03:00", "04:00")]) });
         res = await post(base, "/api/adjust-plan", adjustBody());
         assert.equal(res.status, 502);
-        assert.equal(res.json.error, "AI nuk arriti të vendoste asnjë seancë në kohën që ke të lirë. Provo përsëri.");
+        assert.equal(res.json.error, "The AI could not place any session in the time you have free. Try again.");
     });
 
     test("P1-4: with no free time left, adjust answers 400 and does not call the AI", async () => {
         const body = adjustBody({}, { weeklyAvailability: [{ day: "thu", off: true }, { day: "fri", off: true }] });
         const { status, json } = await post(base, "/api/adjust-plan", body);
         assert.equal(status, 400);
-        assert.equal(json.error, "Nuk ka mbetur kohë e lirë deri në fund të planit. Zgjate afatin ose shto më shumë kohë të lirë.");
+        assert.equal(json.error, "There is no free time left until the end of the plan. Extend the deadline or add more free time.");
         assert.equal(fake.planCalls.length, 0);
     });
 
     test("P1-4: a plan whose end date has passed gets its own message", async () => {
         const { status, json } = await post(base, "/api/adjust-plan", adjustBody({ today: "2026-10-17" }));
         assert.equal(status, 400);
-        assert.equal(json.error, "Ky plan ka përfunduar dhe nuk ka më ditë për ta rregulluar. Krijo një plan të ri.");
+        assert.equal(json.error, "This plan has finished and has no days left to rearrange. Create a new plan.");
         assert.equal(fake.planCalls.length, 0);
     });
 
@@ -851,7 +851,7 @@ describe("POST /api/adjust-plan", () => {
 
         assert.equal(status, 200);
         assert.deepEqual(json.sessions.map((s) => `${s.date} ${s.startTime}`), ["2026-10-15 18:30", "2026-10-16 08:00"]);
-        assert.deepEqual(json.warnings, ["Kujdes", "2 seanca të propozuara nga AI u hoqën, sepse nuk përshtateshin me kohën që ke të lirë."]);
+        assert.deepEqual(json.warnings, ["Kujdes", "2 sessions proposed by the AI were removed because they did not fit the time you have free."]);
     });
 
     test("current time before, during and after the free window of a one-window day", async () => {
@@ -881,7 +881,7 @@ describe("POST /api/adjust-plan", () => {
     test("a current time that is not a time is refused and names the field", async () => {
         const { status, json } = await post(base, "/api/adjust-plan", adjustBody({ now: "tani" }));
         assert.equal(status, 400);
-        assert.deepEqual(json.fields, [{ path: "progress.now", message: "Shkruaje orën në formatin 08:30." }]);
+        assert.deepEqual(json.fields, [{ path: "progress.now", message: "Write the time like 08:30." }]);
     });
 
     test("the last day of a plan can still be adjusted", async () => {
@@ -895,14 +895,14 @@ describe("POST /api/adjust-plan", () => {
         fake.plan = async () => ({ ok: false, error: "insufficient_extraction" });
         let res = await post(base, "/api/adjust-plan", adjustBody());
         assert.equal(res.status, 502);
-        assert.equal(res.json.error, "AI gjeneroi një plan të paplotë. Provo përsëri.");
+        assert.equal(res.json.error, "The AI produced an incomplete plan. Try again.");
 
         fake.plan = async () => {
             throw Object.assign(new Error("no credits"), { status: 402 });
         };
         res = await post(base, "/api/adjust-plan", adjustBody());
         assert.equal(res.status, 503);
-        assert.equal(res.json.error, "Modeli AI nuk është i disponueshëm për momentin.");
+        assert.equal(res.json.error, "The AI model is not available right now.");
     });
 });
 

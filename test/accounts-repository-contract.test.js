@@ -10,6 +10,9 @@ import { createMemoryAccountsRepository } from "../lib/accounts/memoryRepository
 import { createPostgresAccountsRepository } from "../lib/accounts/postgres/repository.js";
 import { startPostgres } from "./helpers/embeddedPg.js";
 
+/* The suites that start a real PostgreSQL (the embedded-postgres package) run with `npm run test:pg`; `npm test` stays fast. */
+const PG = process.env.ORARI_PG === "1" || process.env.npm_lifecycle_event === "test:pg";
+
 const T0 = "2026-10-14T10:00:00.000Z";
 const at = (min) => new Date(new Date(T0).getTime() + min * 60_000).toISOString();
 const user = (n, extra = {}) => ({ id: `u${n}`, email: `u${n}@example.com`, passwordHash: `hash-${n}`, name: `Përdoruesi ${n} ë ç`, emailVerifiedAt: null, createdAt: T0, ...extra });
@@ -32,6 +35,16 @@ function contract(makeRepo) {
         assert.equal(await repo.updateUser("u1", { passwordHash: "new-hash" }), true);
         assert.equal((await repo.findUserByEmail("u1@example.com")).passwordHash, "new-hash");
         assert.equal(await repo.updateUser("nope", { name: "x" }), false);
+    });
+
+    test("users: the sign-in address can move, and cannot move onto another account's", async () => {
+        const repo = await makeRepo();
+        await repo.createUser(user(1));
+        await repo.createUser(user(2));
+        assert.equal(await repo.updateUser("u1", { email: "moved@example.com" }), true);
+        assert.equal(await repo.findUserByEmail("u1@example.com"), undefined);
+        assert.equal((await repo.findUserByEmail("moved@example.com")).id, "u1");
+        assert.equal((await repo.findUserById("u1")).email, "moved@example.com");
     });
 
     test("users: ten concurrent sign-ups with one address, exactly one wins", async () => {
@@ -173,7 +186,7 @@ function contract(makeRepo) {
 
 describe("repository contract: in memory", () => contract(async () => createMemoryAccountsRepository()));
 
-describe("repository contract: real PostgreSQL", () => {
+describe("repository contract: real PostgreSQL", { skip: !PG }, () => {
     let db;
     before(async () => {
         db = await startPostgres();

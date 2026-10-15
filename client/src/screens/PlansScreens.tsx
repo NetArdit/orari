@@ -16,16 +16,16 @@ export function PlansScreen() {
 
     return (
         <>
-            <ScreenTitle title="Planet" />
+            <ScreenTitle title="Plans" />
             {state.unreadable.length > 0 && (
-                <Notice look="warn" title={`${state.unreadable.length} plan nuk lexohet`}>
-                    <p className="text-sm">Ato janë ende në këtë pajisje dhe nuk janë fshirë.</p>
+                <Notice look="warn" title={`${state.unreadable.length} plan cannot be read`}>
+                    <p className="text-sm">They are still on this device and have not been deleted.</p>
                 </Notice>
             )}
             {state.plans.length === 0 ? (
-                <Empty title="Ende s'ke plane">
+                <Empty title="No plans yet">
                     <Link to={{ name: "newPlan" }} className={buttonClass("primary", "self-start")}>
-                        Krijo planin e parë
+                        Create your first plan
                     </Link>
                 </Empty>
             ) : (
@@ -38,8 +38,8 @@ export function PlansScreen() {
                                 <Link to={{ name: "plan", planId: plan.id }} className="flex flex-col gap-1 rounded-m bg-raised p-4 shadow-raised hover:bg-sunk">
                                     <span className="text-lg font-semibold">{plan.subject}</span>
                                     <span className="text-[13px] text-muted">
-                                        {shortDate(plan.startDate)} – {shortDate(plan.endDate)} · {ended ? "ka përfunduar" : `${p.remaining} përpara`} · {p.done + p.partial}/{p.total} kryer
-                                        {needsReplan(plan, clock) ? ` · ${p.missed} të humbura` : ""}
+                                        {shortDate(plan.startDate)} – {shortDate(plan.endDate)} · {ended ? "finished" : `${p.remaining} ahead`} · {p.done + p.partial}/{p.total} done
+                                        {needsReplan(plan, clock) ? ` · ${p.missed} missed` : ""}
                                     </span>
                                 </Link>
                             </li>
@@ -63,16 +63,16 @@ export function PlanScreen({ planId }: { planId: string }) {
     const plan = state.plans.find((p) => p.id === planId);
     if (!plan) {
         return (
-            <Empty title="Ky plan nuk është në këtë pajisje">
+            <Empty title="This plan is not on this device">
                 <Link to={{ name: "plans" }} className={buttonClass("secondary", "self-start")}>
-                    Te planet
+                    To the plans
                 </Link>
             </Empty>
         );
     }
 
     const progress = progressOf(plan.sessions, clock);
-    const profile = state.profile ?? { name: "Nxënës", educationLevel: null };
+    const profile = state.profile ?? { name: "Student", educationLevel: null };
     const byDate = new Map<string, typeof plan.sessions>();
     for (const s of [...plan.sessions].sort(byTime)) byDate.set(s.date, [...(byDate.get(s.date) ?? []), s]);
 
@@ -92,20 +92,20 @@ export function PlanScreen({ planId }: { planId: string }) {
         <>
             <ScreenTitle eyebrow={`${shortDate(plan.startDate)} – ${shortDate(plan.endDate)}`} title={plan.subject}>
                 <p className="text-muted">
-                    {progress.done + progress.partial} nga {progress.total} seanca të kryera · {Math.round(progress.completion * 100)}%
+                    {progress.done + progress.partial} of {progress.total} sessions done · {Math.round(progress.completion * 100)}%
                 </p>
             </ScreenTitle>
 
             <div className="flex flex-wrap gap-2">
                 {needsReplan(plan, clock) && replanState.status === "idle" && (
                     <Button look="primary" onClick={() => replan.start({ planId: plan.id, profile })}>
-                        Rregulloje planin
+                        Rearrange the plan
                     </Button>
                 )}
-                <Button onClick={exportIcs}>Shto në kalendar (.ics)</Button>
+                <Button onClick={exportIcs}>Add to calendar (.ics)</Button>
                 {!confirmDelete ? (
                     <Button look="danger" onClick={() => setConfirmDelete(true)}>
-                        Fshije planin
+                        Delete the plan
                     </Button>
                 ) : (
                     <>
@@ -117,40 +117,40 @@ export function PlanScreen({ planId }: { planId: string }) {
                                 });
                             }}
                         >
-                            Po, fshije
+                            Yes, delete it
                         </Button>
                         <Button look="quiet" onClick={() => setConfirmDelete(false)}>
-                            Jo
+                            No
                         </Button>
                     </>
                 )}
             </div>
 
             {replanState.status === "working" && (
-                <Notice role="status" title="Po e rregullojmë planin…">
+                <Notice role="status" title="Rearranging the plan…">
                     <Button className="self-start" onClick={() => replan.cancel()}>
-                        Ndale
+                        Stop
                     </Button>
                 </Notice>
             )}
             {replanState.status === "failed" && (
                 <Notice look="bad" role="alert" title={replanState.failure.message}>
                     <Button look="quiet" className="self-start" onClick={() => replan.reset()}>
-                        Mbyll
+                        Close
                     </Button>
                 </Notice>
             )}
             {replanState.status === "done" && (
-                <Notice look="ok" role="status" title="Plani u rregullua">
+                <Notice look="ok" role="status" title="The plan was rearranged">
                     <Button look="quiet" className="self-start" onClick={() => replan.reset()}>
-                        Në rregull
+                        OK
                     </Button>
                 </Notice>
             )}
 
             {plan.strategy && (
                 <section className="flex flex-col gap-2 rounded-m bg-sunk p-4">
-                    <h2 className="text-base font-semibold">Si e ndërtuam</h2>
+                    <h2 className="text-base font-semibold">How we built it</h2>
                     <p className="text-sm">{plan.strategy}</p>
                     {plan.explanations.length > 0 && (
                         <ul className="ml-5 list-disc text-sm text-muted">
@@ -200,9 +200,9 @@ export function SessionScreen({ planId, sessionId }: { planId: string; sessionId
     const session = plan?.sessions.find((s) => s.id === sessionId);
     if (!plan || !session) {
         return (
-            <Empty title="Kjo seancë nuk u gjet">
+            <Empty title="This session was not found">
                 <Link to={{ name: "today" }} className={buttonClass("secondary", "self-start")}>
-                    Kthehu te Sot
+                    Back to Today
                 </Link>
             </Empty>
         );
@@ -227,13 +227,13 @@ export function SessionScreen({ planId, sessionId }: { planId: string; sessionId
 
             {session.goal && (
                 <section className="flex flex-col gap-1">
-                    <h2 className="text-base font-semibold">Qëllimi</h2>
+                    <h2 className="text-base font-semibold">Goal</h2>
                     <p>{session.goal}</p>
                 </section>
             )}
             {session.tasks.length > 0 && (
                 <section className="flex flex-col gap-2">
-                    <h2 className="text-base font-semibold">Çfarë bën në këtë orë</h2>
+                    <h2 className="text-base font-semibold">What to do in this hour</h2>
                     <ul className="flex flex-col gap-2">
                         {session.tasks.map((task) => (
                             <li key={task} className="rounded-m bg-sunk px-3 py-2.5">
@@ -245,13 +245,13 @@ export function SessionScreen({ planId, sessionId }: { planId: string; sessionId
             )}
             {session.material && (
                 <p className="text-sm text-muted">
-                    Materiali: <span className="text-ink">{session.material}</span>
+                    Material: <span className="text-ink">{session.material}</span>
                 </p>
             )}
 
             <section className="flex flex-col gap-2">
-                <h2 className="text-base font-semibold">Si shkoi?</h2>
-                <Marks status={session.status} onMark={(status) => void store.markSession(plan.id, session.id, status)} label={`Si shkoi: ${session.title}`} />
+                <h2 className="text-base font-semibold">How did it go?</h2>
+                <Marks status={session.status} onMark={(status) => void store.markSession(plan.id, session.id, status)} label={`How it went: ${session.title}`} />
             </section>
         </>
     );

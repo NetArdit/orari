@@ -9,12 +9,12 @@ import { Field, INPUT } from "../ui/forms.tsx";
 import { AccountRecovery, Button, buttonClass, Link, Notice, ScreenTitle } from "../ui/primitives.tsx";
 import type { FieldError } from "../api/types.ts";
 
-const WEEKDAY_NAMES: Record<Weekday, string> = { mon: "E hënë", tue: "E martë", wed: "E mërkurë", thu: "E enjte", fri: "E premte", sat: "E shtunë", sun: "E diel" };
-const WEEKDAY_SHORT: Record<Weekday, string> = { mon: "Hën", tue: "Mar", wed: "Mër", thu: "Enj", fri: "Pre", sat: "Sht", sun: "Die" };
-const MODES: [PlanMode, string][] = [["general", "I përgjithshëm"], ["exam", "Provim"], ["new_subject", "Lëndë e re"], ["project", "Projekt"], ["assignment", "Detyrë"], ["certification", "Certifikim"], ["skill", "Aftësi"], ["revision", "Përsëritje"]];
-const DIFFICULTIES: [Difficulty, string][] = [["easy", "E lehtë"], ["medium", "Mesatare"], ["hard", "E vështirë"]];
-const COMMITMENT_KINDS: [CommitmentKind, string][] = [["work", "Punë"], ["school", "Shkollë"], ["commute", "Rrugë"], ["meal", "Ushqim"], ["sleep", "Gjumë"], ["family", "Familje"], ["gym", "Palestër"], ["other", "Tjetër"]];
-const ENERGY: [Energy | "", string][] = [["", "—"], ["high", "E lartë"], ["medium", "Mesatare"], ["low", "E ulët"]];
+const WEEKDAY_NAMES: Record<Weekday, string> = { mon: "Monday", tue: "Tuesday", wed: "Wednesday", thu: "Thursday", fri: "Friday", sat: "Saturday", sun: "Sunday" };
+const WEEKDAY_SHORT: Record<Weekday, string> = { mon: "Mon", tue: "Tue", wed: "Wed", thu: "Thu", fri: "Fri", sat: "Sat", sun: "Sun" };
+const MODES: [PlanMode, string][] = [["general", "General"], ["exam", "Exam"], ["new_subject", "New subject"], ["project", "Project"], ["assignment", "Assignment"], ["certification", "Certification"], ["skill", "Skill"], ["revision", "Revision"]];
+const DIFFICULTIES: [Difficulty, string][] = [["easy", "Easy"], ["medium", "Medium"], ["hard", "Hard"]];
+const COMMITMENT_KINDS: [CommitmentKind, string][] = [["work", "Work"], ["school", "School"], ["commute", "Commute"], ["meal", "Meal"], ["sleep", "Sleep"], ["family", "Family"], ["gym", "Gym"], ["other", "Other"]];
+const ENERGY: [Energy | "", string][] = [["", "—"], ["high", "High"], ["medium", "Medium"], ["low", "Low"]];
 
 function Select<T extends string>({ value, options, onChange, ...rest }: { value: T; options: [T, string][]; onChange: (value: T) => void } & Omit<React.SelectHTMLAttributes<HTMLSelectElement>, "value" | "onChange">) {
     return (
@@ -50,7 +50,7 @@ export function NewPlanScreen() {
             return next;
         });
 
-    const profile = state.status === "ready" && state.profile ? state.profile : { name: "Nxënës", educationLevel: null };
+    const profile = state.status === "ready" && state.profile ? state.profile : { name: "Student", educationLevel: null };
 
     // What the AI read becomes the form, once, with what the person left out filled in. When that is enough for a
     // plan, the plan is made at once: a short description is all it takes. Otherwise the form is shown to be completed.
@@ -79,38 +79,38 @@ export function NewPlanScreen() {
         const working = parseState.status === "working";
         return (
             <>
-                <ScreenTitle eyebrow="Plan i ri" title="Çfarë ke për të mësuar?" />
-                <p className="text-muted">Shkruaje si t'ia tregoje një shoku: lëndën, deri kur, dhe kur je e lirë. Para se ta krijojmë orarin, do ta shohësh çfarë kemi kuptuar dhe mund ta ndreqësh.</p>
+                <ScreenTitle eyebrow="New plan" title="What do you want to learn?" />
+                <p className="text-muted">Write it as if you were telling a friend: the subject, until when, and when you are free. Anything you leave out, the AI works out for you and builds the plan right away.</p>
 
-                <Field label="Përshkrimi yt" hint="Mos u mërzit për drejtshkrimin.">
-                    {(props) => <textarea {...props} value={text} onChange={(e) => setText(e.target.value)} maxLength={2000} rows={7} className={`${INPUT} py-2.5`} placeholder="P.sh. Më 30 tetor kam provimin e Matematikës, kapitujt 3 deri 5. Punoj prej 9 deri në 5. Të dielave s'dua me mësu." />}
+                <Field label="Your description" hint="Don't worry about spelling.">
+                    {(props) => <textarea {...props} value={text} onChange={(e) => setText(e.target.value)} maxLength={2000} rows={7} className={`${INPUT} py-2.5`} placeholder="e.g. I have my Maths exam on 30 October, chapters 3 to 5. I work from 9 to 5. I don't want to study on Sundays." />}
                 </Field>
 
                 {failure && (
                     <Notice look="bad" role="alert" title={failure.message}>
                         <AccountRecovery kind={failure.kind} />
-                        {failure.kind !== "invalid" && "retryAfterSeconds" in failure && failure.retryAfterSeconds ? <p className="text-sm">Provo përsëri pas {failure.retryAfterSeconds} sekondash.</p> : null}
+                        {failure.kind !== "invalid" && "retryAfterSeconds" in failure && failure.retryAfterSeconds ? <p className="text-sm">Try again in {failure.retryAfterSeconds} seconds.</p> : null}
                     </Notice>
                 )}
 
                 {working ? (
                     <div role="status" className="flex flex-col gap-2">
-                        <p className="text-muted">Po e lexojmë përshkrimin… zakonisht merr më pak se një minutë.</p>
+                        <p className="text-muted">Reading your description… this usually takes under a minute.</p>
                         <Button className="self-start" onClick={() => parse.cancel()}>
-                            Ndale
+                            Stop
                         </Button>
                     </div>
                 ) : (
                     <div className="flex flex-wrap gap-2">
                         <Button look="primary" onClick={() => parse.start(text)}>
-                            Vazhdo
+                            Continue
                         </Button>
                         <Button look="quiet" onClick={() => { setForm(emptyPlanForm(today)); setStep("check"); }}>
-                            Më mirë e plotësoj vetë
+                            I'd rather fill it in myself
                         </Button>
                     </div>
                 )}
-                <p className="text-[13px] text-muted">Teksti që shkruan i dërgohet një shërbimi të jashtëm të inteligjencës artificiale për ta lexuar. Mos shkruaj gjëra që s'do t'i ndaje me të tjerët.</p>
+                <p className="text-[13px] text-muted">The text you write is sent to an outside AI service to be read. Do not write anything you would not share with others.</p>
             </>
         );
     }
@@ -125,29 +125,29 @@ export function NewPlanScreen() {
             }}
             noValidate
         >
-            <ScreenTitle eyebrow="Plan i ri" title="A e kemi kuptuar mirë?">
-                <p className="text-muted">Ndreqe çfarëdo që s'është ashtu, pastaj krijoje orarin.</p>
+            <ScreenTitle eyebrow="New plan" title="Did we understand you correctly?">
+                <p className="text-muted">Correct anything that is off, then create the schedule.</p>
             </ScreenTitle>
 
             {questions.length > 0 && (
-                <Notice look="warn" title="AI donte ta dinte:">
+                <Notice look="warn" title="The AI wanted to know:">
                     <ul className="ml-5 list-disc text-sm">
                         {questions.map((q) => (
                             <li key={q}>{q}</li>
                         ))}
                     </ul>
-                    <p className="text-[13px]">Përgjigju duke ndryshuar fushat poshtë.</p>
+                    <p className="text-[13px]">Answer by changing the fields below.</p>
                 </Notice>
             )}
 
             {createState.status === "failed" && fieldErrors.length === 0 && (
                 <Notice look="bad" role="alert" title={createState.failure.message}>
                     <AccountRecovery kind={createState.failure.kind} />
-                    {"retryAfterSeconds" in createState.failure && createState.failure.retryAfterSeconds ? <p className="text-sm">Provo përsëri pas {createState.failure.retryAfterSeconds} sekondash.</p> : null}
+                    {"retryAfterSeconds" in createState.failure && createState.failure.retryAfterSeconds ? <p className="text-sm">Try again in {createState.failure.retryAfterSeconds} seconds.</p> : null}
                 </Notice>
             )}
             {fieldErrors.length > 0 && (
-                <Notice look="bad" role="alert" title="Disa fusha duhen ndrequr">
+                <Notice look="bad" role="alert" title="Some fields need fixing">
                     <ul className="ml-5 list-disc text-sm">
                         {fieldErrors.map((e, i) => (
                             <li key={`${e.path}:${i}`}>{e.message}</li>
@@ -157,31 +157,31 @@ export function NewPlanScreen() {
             )}
 
             <section className="flex flex-col gap-4">
-                <Field label="Lënda" errors={at("subject")}>
+                <Field label="Subject" errors={at("subject")}>
                     {(props) => <input {...props} type="text" value={form.subject} maxLength={120} onChange={(e) => update((d) => void (d.subject = e.target.value))} className={INPUT} />}
                 </Field>
-                <Field label="Çfarë mbulon" hint="Kapituj, faqe, tema." errors={at("materialAmount")}>
+                <Field label="What it covers" hint="Chapters, pages, topics." errors={at("materialAmount")}>
                     {(props) => <input {...props} type="text" value={form.material} maxLength={200} onChange={(e) => update((d) => void (d.material = e.target.value))} className={INPUT} />}
                 </Field>
-                <Field label="Çfarë dëshiron të arrish" errors={at("goal")}>
+                <Field label="What you want to achieve" errors={at("goal")}>
                     {(props) => <input {...props} type="text" value={form.goal} maxLength={300} onChange={(e) => update((d) => void (d.goal = e.target.value))} className={INPUT} />}
                 </Field>
                 <div className="grid gap-4 sm:grid-cols-2">
-                    <Field label="Lloji i planit">{(props) => <Select {...props} value={form.planMode} options={MODES} onChange={(v) => update((d) => void (d.planMode = v))} />}</Field>
-                    <Field label="Vështirësia">{(props) => <Select {...props} value={form.difficulty} options={DIFFICULTIES} onChange={(v) => update((d) => void (d.difficulty = v))} />}</Field>
-                    <Field label="Prej" errors={at("startDate")}>
+                    <Field label="Kind of plan">{(props) => <Select {...props} value={form.planMode} options={MODES} onChange={(v) => update((d) => void (d.planMode = v))} />}</Field>
+                    <Field label="Difficulty">{(props) => <Select {...props} value={form.difficulty} options={DIFFICULTIES} onChange={(v) => update((d) => void (d.difficulty = v))} />}</Field>
+                    <Field label="From" errors={at("startDate")}>
                         {(props) => <input {...props} type="date" value={form.startDate} onChange={(e) => update((d) => void (d.startDate = e.target.value))} className={INPUT} />}
                     </Field>
-                    <Field label="Deri" errors={at("endDate")}>
+                    <Field label="Until" errors={at("endDate")} hint="Optional: leave it empty and the plan runs four weeks.">
                         {(props) => <input {...props} type="date" value={form.endDate} onChange={(e) => update((d) => void (d.endDate = e.target.value))} className={INPUT} />}
                     </Field>
-                    <Field label="Sa zgjat një seancë" hint="Opsionale." errors={at("sessionPreferenceMinutes")}>
+                    <Field label="How long a session lasts" hint="Optional." errors={at("sessionPreferenceMinutes")}>
                         {(props) => (
                             <select {...props} value={form.sessionMinutes ?? ""} onChange={(e) => update((d) => void (d.sessionMinutes = e.target.value ? Number(e.target.value) : null))} className={INPUT}>
-                                <option value="">Sipas planit</option>
+                                <option value="">Let the plan decide</option>
                                 {[25, 30, 45, 60, 90, 120].map((m) => (
                                     <option key={m} value={m}>
-                                        {m} minuta
+                                        {m} minutes
                                     </option>
                                 ))}
                             </select>
@@ -191,8 +191,8 @@ export function NewPlanScreen() {
             </section>
 
             <fieldset className="flex flex-col gap-3">
-                <legend className="text-lg font-semibold">Kur je e lirë</legend>
-                <p className="text-[13px] text-muted">Për secilën ditë zgjidh: lëre pa caktuar, shëno orët kur mëson, ose shëno pushim. Nëse nuk caktohet asnjë ditë, mund të planifikohet çdo ditë.</p>
+                <legend className="text-lg font-semibold">When you are free</legend>
+                <p className="text-[13px] text-muted">For each day choose: leave it unset, mark the hours when you study, or mark a rest day. If no day is set, any day can be planned.</p>
                 {errorsAt(fieldErrors, "weeklyAvailability").length > 0 && at("weeklyAvailability").map((m) => <p key={m} className="text-[13px] font-semibold text-bad">{m}</p>)}
                 {WEEKDAYS.map((day) => {
                     const entry = form.days[day];
@@ -201,14 +201,14 @@ export function NewPlanScreen() {
                             <div className="flex flex-wrap items-center justify-between gap-2">
                                 <span className="font-semibold">{WEEKDAY_NAMES[day]}</span>
                                 <select
-                                    aria-label={`${WEEKDAY_NAMES[day]}: çfarë bëhet`}
+                                    aria-label={`${WEEKDAY_NAMES[day]}: what happens`}
                                     value={entry.mode}
                                     onChange={(e) => update((d) => { const mode = e.target.value as "unset" | "free" | "off"; d.days[day].mode = mode; if (mode === "free" && d.days[day].windows.length === 0) d.days[day].windows = [{ start: "17:00", end: "19:00" }]; })}
                                     className={`${INPUT} w-auto`}
                                 >
-                                    <option value="unset">Pa caktuar</option>
-                                    <option value="free">Mësoj</option>
-                                    <option value="off">Pushim</option>
+                                    <option value="unset">Not set</option>
+                                    <option value="free">Study</option>
+                                    <option value="off">Rest</option>
                                 </select>
                             </div>
                             {entry.mode === "free" && (
@@ -218,11 +218,11 @@ export function NewPlanScreen() {
                                         const errs = errorsAt(fieldErrors, `weeklyAvailability.${idx}.windows.${i}`);
                                         return (
                                             <div key={i} className="flex flex-wrap items-center gap-2">
-                                                <input aria-label={`${WEEKDAY_NAMES[day]}, nga`} aria-invalid={errs.length > 0} type="time" value={w.start} onChange={(e) => update((d) => void (d.days[day].windows[i]!.start = e.target.value))} className={`${INPUT} w-auto font-time`} />
+                                                <input aria-label={`${WEEKDAY_NAMES[day]}, from`} aria-invalid={errs.length > 0} type="time" value={w.start} onChange={(e) => update((d) => void (d.days[day].windows[i]!.start = e.target.value))} className={`${INPUT} w-auto font-time`} />
                                                 <span aria-hidden="true">–</span>
-                                                <input aria-label={`${WEEKDAY_NAMES[day]}, deri`} aria-invalid={errs.length > 0} type="time" value={w.end} onChange={(e) => update((d) => void (d.days[day].windows[i]!.end = e.target.value))} className={`${INPUT} w-auto font-time`} />
-                                                <Button look="quiet" aria-label={`Hiqe kohën ${i + 1} të ditës ${WEEKDAY_NAMES[day]}`} onClick={() => update((d) => void d.days[day].windows.splice(i, 1))}>
-                                                    Hiqe
+                                                <input aria-label={`${WEEKDAY_NAMES[day]}, until`} aria-invalid={errs.length > 0} type="time" value={w.end} onChange={(e) => update((d) => void (d.days[day].windows[i]!.end = e.target.value))} className={`${INPUT} w-auto font-time`} />
+                                                <Button look="quiet" aria-label={`Remove time ${i + 1} of ${WEEKDAY_NAMES[day]}`} onClick={() => update((d) => void d.days[day].windows.splice(i, 1))}>
+                                                    Remove
                                                 </Button>
                                                 {errs.length > 0 && <span className="text-[13px] font-semibold text-bad">{errs.join(" ")}</span>}
                                             </div>
@@ -230,7 +230,7 @@ export function NewPlanScreen() {
                                     })}
                                     {entry.windows.length < LIMITS.windowsPerDay && (
                                         <Button look="quiet" className="self-start" onClick={() => update((d) => void d.days[day].windows.push({ start: "20:00", end: "21:00" }))}>
-                                            + Shto një kohë
+                                            + Add a time
                                         </Button>
                                     )}
                                 </div>
@@ -241,25 +241,25 @@ export function NewPlanScreen() {
             </fieldset>
 
             <fieldset className="flex flex-col gap-3">
-                <legend className="text-lg font-semibold">Kohët kur je e zënë</legend>
-                <p className="text-[13px] text-muted">Punë, shkollë, gjumë, rrugë. Seancat nuk vendosen mbi to. Një gjumë 23:00–07:00 supozohet nëse nuk shton tëndin.</p>
+                <legend className="text-lg font-semibold">When you are busy</legend>
+                <p className="text-[13px] text-muted">Work, school, sleep, commuting. Sessions are never placed over them. Sleep from 23:00 to 07:00 is assumed unless you add your own.</p>
                 {form.commitments.map((c: CommitmentDraft, i) => {
                     const errs = errorsAt(fieldErrors, `commitments.${i}`);
                     return (
                         <div key={i} className="flex flex-col gap-3 rounded-m bg-sunk p-3">
                             <div className="grid gap-3 sm:grid-cols-2">
-                                <Field label="Emri" errors={errorsAt(fieldErrors, `commitments.${i}.label`)}>
+                                <Field label="Name" errors={errorsAt(fieldErrors, `commitments.${i}.label`)}>
                                     {(props) => <input {...props} type="text" value={c.label} maxLength={60} onChange={(e) => update((d) => void (d.commitments[i]!.label = e.target.value))} className={INPUT} />}
                                 </Field>
-                                <Field label="Lloji">{(props) => <Select {...props} value={c.kind} options={COMMITMENT_KINDS} onChange={(v) => update((d) => void (d.commitments[i]!.kind = v))} />}</Field>
-                                <Field label="Nga" errors={errorsAt(fieldErrors, `commitments.${i}.start`)}>
+                                <Field label="Kind">{(props) => <Select {...props} value={c.kind} options={COMMITMENT_KINDS} onChange={(v) => update((d) => void (d.commitments[i]!.kind = v))} />}</Field>
+                                <Field label="From" errors={errorsAt(fieldErrors, `commitments.${i}.start`)}>
                                     {(props) => <input {...props} type="time" value={c.start} onChange={(e) => update((d) => void (d.commitments[i]!.start = e.target.value))} className={`${INPUT} font-time`} />}
                                 </Field>
-                                <Field label="Deri" hint="Mund të kalojë mesnatën." errors={errorsAt(fieldErrors, `commitments.${i}.end`)}>
+                                <Field label="Until" hint="May pass midnight." errors={errorsAt(fieldErrors, `commitments.${i}.end`)}>
                                     {(props) => <input {...props} type="time" value={c.end} onChange={(e) => update((d) => void (d.commitments[i]!.end = e.target.value))} className={`${INPUT} font-time`} />}
                                 </Field>
                             </div>
-                            <div role="group" aria-label="Ditët" className="flex flex-wrap gap-1.5">
+                            <div role="group" aria-label="Days" className="flex flex-wrap gap-1.5">
                                 {WEEKDAYS.map((day) => (
                                     <button
                                         key={day}
@@ -272,47 +272,47 @@ export function NewPlanScreen() {
                                         {WEEKDAY_SHORT[day]}
                                     </button>
                                 ))}
-                                <span className="self-center text-[13px] text-muted">{c.days.length === 0 ? "çdo ditë" : ""}</span>
+                                <span className="self-center text-[13px] text-muted">{c.days.length === 0 ? "every day" : ""}</span>
                             </div>
                             {errs.length > 0 && <p className="text-[13px] font-semibold text-bad">{errs.join(" ")}</p>}
                             <Button look="danger" className="self-start" onClick={() => update((d) => void d.commitments.splice(i, 1))}>
-                                Hiqe
+                                Remove
                             </Button>
                         </div>
                     );
                 })}
                 {form.commitments.length < LIMITS.commitments && (
                     <Button className="self-start" onClick={() => update((d) => void d.commitments.push({ label: "", kind: "work", days: [], start: "09:00", end: "17:00" }))}>
-                        + Shto diçka
+                        + Add something
                     </Button>
                 )}
             </fieldset>
 
             <fieldset className="flex flex-col gap-3">
-                <legend className="text-lg font-semibold">Ditë pa mësim</legend>
-                <p className="text-[13px] text-muted">Provim tjetër, udhëtim, festë.</p>
+                <legend className="text-lg font-semibold">Days without study</legend>
+                <p className="text-[13px] text-muted">Another exam, a trip, a holiday.</p>
                 <div className="flex flex-wrap gap-2">
                     {form.unavailableDates.map((date, i) => (
                         <span key={date} className="inline-flex items-center gap-1 rounded-full bg-sunk py-1 pl-3 pr-1 text-sm">
                             <span className="font-time tabular-nums">{date}</span>
-                            <button type="button" aria-label={`Hiqe ${date}`} onClick={() => update((d) => void d.unavailableDates.splice(i, 1))} className="min-h-9 min-w-9 rounded-full hover:bg-line">
+                            <button type="button" aria-label={`Remove ${date}`} onClick={() => update((d) => void d.unavailableDates.splice(i, 1))} className="min-h-9 min-w-9 rounded-full hover:bg-line">
                                 ×
                             </button>
                         </span>
                     ))}
                 </div>
                 <div className="flex flex-wrap gap-2">
-                    <input aria-label="Data e re pa mësim" type="date" value={newDate} onChange={(e) => setNewDate(e.target.value)} className={`${INPUT} w-auto`} />
+                    <input aria-label="New date without study" type="date" value={newDate} onChange={(e) => setNewDate(e.target.value)} className={`${INPUT} w-auto`} />
                     <Button disabled={!newDate} onClick={() => { update((d) => { if (!d.unavailableDates.includes(newDate)) d.unavailableDates.push(newDate); }); setNewDate(""); }}>
-                        Shtoje
+                        Add
                     </Button>
                 </div>
             </fieldset>
 
             <fieldset className="grid gap-3 sm:grid-cols-3">
-                <legend className="mb-2 text-lg font-semibold">Energjia</legend>
+                <legend className="mb-2 text-lg font-semibold">Energy</legend>
                 {(["morning", "afternoon", "evening"] as const).map((part) => (
-                    <Field key={part} label={{ morning: "Në mëngjes", afternoon: "Pasdite", evening: "Në mbrëmje" }[part]}>
+                    <Field key={part} label={{ morning: "In the morning", afternoon: "In the afternoon", evening: "In the evening" }[part]}>
                         {(props) => <Select {...props} value={form.energy[part] ?? ""} options={ENERGY} onChange={(v) => update((d) => void (d.energy[part] = v === "" ? null : v))} />}
                     </Field>
                 ))}
@@ -320,18 +320,18 @@ export function NewPlanScreen() {
 
             {creating ? (
                 <div role="status" className="flex flex-col gap-2">
-                    <p className="text-muted">Po e ndërtojmë orarin… zakonisht merr më pak se një minutë.</p>
+                    <p className="text-muted">Building your schedule… this usually takes under a minute.</p>
                     <Button className="self-start" onClick={() => create.cancel()}>
-                        Ndale
+                        Stop
                     </Button>
                 </div>
             ) : (
                 <div className="flex flex-wrap gap-2">
                     <Button type="submit" look="primary">
-                        Krijo orarin
+                        Create the schedule
                     </Button>
                     <Button look="quiet" onClick={() => { create.reset(); setStep("describe"); }}>
-                        Kthehu te përshkrimi
+                        Back to the description
                     </Button>
                 </div>
             )}

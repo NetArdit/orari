@@ -16,6 +16,9 @@ import { createPostgresAccountsRepository } from "../lib/accounts/postgres/repos
 import { createLinkSealer, withSealedOutbox } from "../lib/accounts/postgres/sealedOutbox.js";
 import { startPostgres } from "./helpers/embeddedPg.js";
 
+/* The suites that start a real PostgreSQL (the embedded-postgres package) run with `npm run test:pg`; `npm test` stays fast. */
+const PG = process.env.ORARI_PG === "1" || process.env.npm_lifecycle_event === "test:pg";
+
 const ORIGIN = "https://orari.example";
 const GOOD = "een lange zin die niemand raadt";
 const NEW_GOOD = "een andere lange zin voor later";
@@ -32,7 +35,9 @@ async function until(find) {
 const tokenIn = (link) => decodeURIComponent(link.split("#token=")[1]);
 
 let db;
-before(async () => (db = await startPostgres()));
+before(async () => {
+    if (PG) db = await startPostgres();
+});
 after(async () => db?.stop());
 
 async function bootApp(mail) {
@@ -81,7 +86,7 @@ function browser(base) {
 const session = (id) => ({ id, status: "pending", date: "2026-10-15", startTime: "08:00", endTime: "09:00", type: "learning", title: "Seancë " + id });
 const plan = (id) => ({ id, createdAt: "2026-10-01T08:00:00.000Z", subject: "Matematikë", startDate: "2026-10-14", endDate: "2026-10-30", sessions: [session("s1"), session("s2")] });
 
-test("sign up, verify, sign in, save a plan, mark, reset the password, sign out; all of it survives a restart", async () => {
+test("sign up, verify, sign in, save a plan, mark, reset the password, sign out; all of it survives a restart", { skip: !PG }, async () => {
     const mail = createTestMail();
     const first = await bootApp(mail);
     const page = browser(first.base);
@@ -134,7 +139,7 @@ test("sign up, verify, sign in, save a plan, mark, reset the password, sign out;
     await second.close();
 });
 
-test("mail that was waiting when the process stopped is sent by the next one", async () => {
+test("mail that was waiting when the process stopped is sent by the next one", { skip: !PG }, async () => {
     const failing = createTestMail();
     let brokenCalls = 0;
     const brokenMail = { ...failing, sendVerification: async () => { brokenCalls++; throw new Error("provider down"); } };

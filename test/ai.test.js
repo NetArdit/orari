@@ -141,7 +141,7 @@ describe("a clean answer", () => {
 
         const [system, user] = calls[0].params.messages;
         assert.equal(system.role, "system");
-        assert.match(system.content, /^Ti je StudyFlow/);
+        assert.match(system.content, /^You are StudyFlow/);
         assert.deepEqual(JSON.parse(user.content), {
             subject: "Matematikë", goal: "Provimi", planMode: "exam", difficulty: "hard",
             materialAmount: null, energy: null, sessionPreferenceMinutes: 60,
@@ -157,14 +157,14 @@ describe("a clean answer", () => {
         assert.equal(result.ok, true);
         assert.equal(result.data.subject, "JavaScript");
         const [system, user] = calls[0].params.messages;
-        assert.match(system.content, /Sot është 2026-10-14 \(Wednesday\)/);
+        assert.match(system.content, /Today is 2026-10-14 \(Wednesday\)/);
         assert.equal(user.content, "Du me msu JavaScript");
     });
 
     test("P1-13: given the person's date as text, the weekday is computed from that date, not from the server's clock", async () => {
         const { ai, calls } = build([reply(JSON.stringify({ subject: "JavaScript" }))]);
         await ai.parseNaturalLanguageRequest("Du me msu JavaScript", "2026-10-18");
-        assert.match(calls[0].params.messages[0].content, /Sot është 2026-10-18 \(Sunday\)/);
+        assert.match(calls[0].params.messages[0].content, /Today is 2026-10-18 \(Sunday\)/);
     });
 
     test("JSON wrapped in a code fence or in prose is still read", async () => {
@@ -245,7 +245,7 @@ describe("repairing a bad answer", () => {
         const messages = calls[1].params.messages;
         assert.deepEqual(messages.map((m) => m.role), ["system", "user", "assistant", "user"]);
         assert.equal(messages[2].content, "Më vjen keq, nuk mundem.");
-        assert.match(messages[3].content, /nuk ishte JSON valid/);
+        assert.match(messages[3].content, /was not valid JSON/);
     });
 
     test("JSON of the wrong shape gets the shape instruction; two bad answers give up", async () => {
@@ -256,7 +256,7 @@ describe("repairing a bad answer", () => {
 
         assert.deepEqual(result, { ok: false, error: "schema_validation_failed" });
         assert.equal(calls.length, 2);
-        assert.match(calls[1].params.messages[3].content, /Struktura e JSON nuk përputhet/);
+        assert.match(calls[1].params.messages[3].content, /The JSON structure does not match/);
     });
 
     test("a date that does not exist counts as the wrong shape", async () => {
@@ -286,7 +286,7 @@ describe("repairing a bad answer", () => {
         const result = await ai.parseNaturalLanguageRequest("hmm", new Date("2026-10-14T10:00:00Z"));
         assert.equal(result.ok, true);
         assert.deepEqual(result.data.clarifyingQuestions, ["Kur fillon?"]);
-        assert.match(calls[1].params.messages[3].content, /Nuk nxore asnjë informacion/);
+        assert.match(calls[1].params.messages[3].content, /You extracted no useful information/);
     });
 });
 

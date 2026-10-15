@@ -42,7 +42,7 @@ describe("ParseRequestBody", () => {
         assert.equal(dropped.data.clientDate, "2026-10-15");
         assert.equal(ok(ParseRequestBody, { text: "abc", timeZone: "E".repeat(65) }), false);
         assert.deepEqual(fieldErrors(ParseRequestBody.safeParse({ text: "abc", timeZone: "Prishtina" }).error), [
-            { path: "timeZone", message: "Zona kohore nuk është e vlefshme." },
+            { path: "timeZone", message: "The time zone is not valid." },
         ]);
     });
 });
@@ -212,12 +212,12 @@ describe("fieldErrors", () => {
         body.profile.name = "";
 
         assert.deepEqual(errorsFor(CreatePlanBody, body), [
-            { path: "profile.name", message: "Vlera është nën minimumin e lejuar." },
-            { path: "structured.startDate", message: "Data nuk është e vlefshme." },
-            { path: "structured.subject", message: "Plotëso këtë fushë." },
-            { path: "structured.weeklyAvailability.0.windows.0.end", message: "Koha e përfundimit duhet të jetë pas kohës së fillimit." },
-            { path: "structured.weeklyAvailability.0.windows.1.start", message: "Shkruaje orën në formatin 08:30." },
-            { path: "structured.sessionPreferenceMinutes", message: "Vlera e dhënë e kalon kufirin e lejuar." },
+            { path: "profile.name", message: "The value is below the allowed minimum." },
+            { path: "structured.startDate", message: "The date is not valid." },
+            { path: "structured.subject", message: "Fill in this field." },
+            { path: "structured.weeklyAvailability.0.windows.0.end", message: "The end time must be after the start time." },
+            { path: "structured.weeklyAvailability.0.windows.1.start", message: "Write the time like 08:30." },
+            { path: "structured.sessionPreferenceMinutes", message: "The value is above the allowed limit." },
         ]);
     });
 
@@ -227,7 +227,7 @@ describe("fieldErrors", () => {
         body.structured.unavailableDates = Array(15).fill("nope");
         const errors = errorsFor(CreatePlanBody, body);
         assert.equal(errors.length, 10);
-        assert.deepEqual(errors[0], { path: "structured.planMode", message: "Vlera nuk është e vlefshme." });
+        assert.deepEqual(errors[0], { path: "structured.planMode", message: "The value is not valid." });
         for (const e of errors) assert.doesNotMatch(e.message, /Invalid|Required|Expected/);
     });
 });
@@ -249,7 +249,7 @@ describe("AdjustPlanBody", () => {
         assert.equal(withNow("18:30").data.progress.now, "18:30");
         assert.equal(withNow("9:05").data.progress.now, "09:05");
         for (const bad of ["24:00", "18.30", "tani", 1830, ""]) assert.equal(withNow(bad).success, false, String(bad));
-        assert.deepEqual(fieldErrors(withNow("tani").error), [{ path: "progress.now", message: "Shkruaje orën në formatin 08:30." }]);
+        assert.deepEqual(fieldErrors(withNow("tani").error), [{ path: "progress.now", message: "Write the time like 08:30." }]);
     });
 });
 

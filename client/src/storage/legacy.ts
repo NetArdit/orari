@@ -89,7 +89,7 @@ export function convertLegacyUser(user: Record<string, unknown>, newId: () => st
 
     const profile = StoredProfile.parse({
         id: text(user.id, 100) || newId(),
-        name: text(user.name, 80) || "Pa emër",
+        name: text(user.name, 80) || "No name",
         educationLevel: text(user.educationLevel, 40) || null,
         school: text(user.school, 120),
         createdAt: text(user.createdAt, 40) || now().toISOString(),

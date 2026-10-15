@@ -318,15 +318,15 @@ describe("the plan form", () => {
 
     test("what is missing is said for each field at once, with the server's own paths", () => {
         const result = buildPlanInputs(emptyPlanForm("2026-10-14"));
-        expect(result).toEqual({ ok: false, errors: [{ path: "structured.subject", message: "Plotëso këtë fushë." }, { path: "structured.endDate", message: "Plotëso këtë fushë." }] });
+        expect(result).toEqual({ ok: false, errors: [{ path: "structured.subject", message: "Fill in this field." }, { path: "structured.endDate", message: "Fill in this field." }] });
     });
 
     test("dates: impossible, reversed, and longer than 180 days", () => {
-        expect(errorsOf((f) => (f.endDate = "2026-02-31"))).toEqual([{ path: "structured.endDate", message: "Data nuk është e vlefshme." }]);
-        expect(errorsOf((f) => (f.endDate = "2026-10-13"))).toEqual([{ path: "structured.endDate", message: "Data e mbarimit duhet të jetë pas datës së fillimit." }]);
+        expect(errorsOf((f) => (f.endDate = "2026-02-31"))).toEqual([{ path: "structured.endDate", message: "The date is not valid." }]);
+        expect(errorsOf((f) => (f.endDate = "2026-10-13"))).toEqual([{ path: "structured.endDate", message: "The end date must be after the start date." }]);
         expect(build((f) => (f.endDate = "2026-10-14")).ok).toBe(true); // one day
         expect(build((f) => (f.endDate = addDays("2026-10-14", 179))).ok).toBe(true); // exactly 180 days
-        expect(errorsOf((f) => (f.endDate = addDays("2026-10-14", 180)))).toEqual([{ path: "structured.endDate", message: "Plani mund të zgjasë më së shumti 180 ditë." }]);
+        expect(errorsOf((f) => (f.endDate = addDays("2026-10-14", 180)))).toEqual([{ path: "structured.endDate", message: "A plan can last at most 180 days." }]);
     });
 
     test("session length: 10 to 240 whole minutes, or no preference", () => {
@@ -351,11 +351,11 @@ describe("the plan form", () => {
             f.days.tue = { mode: "free", windows: [] };
         });
         expect(errors).toEqual([
-            { path: "structured.weeklyAvailability.0.windows.1.start", message: "Shkruaje orën në formatin 08:30." },
-            { path: "structured.weeklyAvailability.0.windows.1.end", message: "Plotëso këtë fushë." },
-            { path: "structured.weeklyAvailability.0.windows.2.end", message: "Koha e përfundimit duhet të jetë pas kohës së fillimit." },
-            { path: "structured.weeklyAvailability.0.windows.3.start", message: "Kjo kohë mbivendoset me një tjetër në të njëjtën ditë." },
-            { path: "structured.weeklyAvailability.1.windows", message: "Plotëso këtë fushë." },
+            { path: "structured.weeklyAvailability.0.windows.1.start", message: "Write the time like 08:30." },
+            { path: "structured.weeklyAvailability.0.windows.1.end", message: "Fill in this field." },
+            { path: "structured.weeklyAvailability.0.windows.2.end", message: "The end time must be after the start time." },
+            { path: "structured.weeklyAvailability.0.windows.3.start", message: "This time overlaps another one on the same day." },
+            { path: "structured.weeklyAvailability.1.windows", message: "Fill in this field." },
         ]);
     });
 
@@ -364,7 +364,7 @@ describe("the plan form", () => {
         const errors = errorsOf((f) => {
             for (const day of Object.keys(f.days) as (keyof typeof f.days)[]) f.days[day] = { mode: "off", windows: [] };
         });
-        expect(errors).toEqual([{ path: "structured.weeklyAvailability", message: "Të paktën një ditë duhet të mbetet për mësim." }]);
+        expect(errors).toEqual([{ path: "structured.weeklyAvailability", message: "At least one day must be left for study." }]);
     });
 
     test("busy time: a night shift may cross midnight; days are chosen, not typed; every day means no day list", () => {
@@ -385,20 +385,20 @@ describe("the plan form", () => {
     test("busy time: a half-filled row is an error, not something dropped in silence", () => {
         const errors = errorsOf((f) => (f.commitments = [{ label: "", kind: "other", days: [], start: "9", end: "09:00" }, { label: "Punë", kind: "work", days: [], start: "09:00", end: "09:00" }]));
         expect(errors).toEqual([
-            { path: "structured.commitments.0.label", message: "Plotëso këtë fushë." },
-            { path: "structured.commitments.0.start", message: "Shkruaje orën në formatin 08:30." },
-            { path: "structured.commitments.1.end", message: "Fillimi dhe mbarimi nuk mund të jenë e njëjta orë." },
+            { path: "structured.commitments.0.label", message: "Fill in this field." },
+            { path: "structured.commitments.0.start", message: "Write the time like 08:30." },
+            { path: "structured.commitments.1.end", message: "The start and the end cannot be the same time." },
         ]);
     });
 
     test("days without study: real dates only, repeated ones once, sorted", () => {
         const result = build((f) => (f.unavailableDates = ["2026-10-20", "2026-10-16", "2026-10-20"]));
         expect(result.ok && result.structured.unavailableDates).toEqual(["2026-10-16", "2026-10-20"]);
-        expect(errorsOf((f) => (f.unavailableDates = ["2026-10-16", "nesër"]))).toEqual([{ path: "structured.unavailableDates.1", message: "Data nuk është e vlefshme." }]);
+        expect(errorsOf((f) => (f.unavailableDates = ["2026-10-16", "nesër"]))).toEqual([{ path: "structured.unavailableDates.1", message: "The date is not valid." }]);
     });
 
     test("a form that is valid field by field but leaves no day to study on is refused, on the availability control", () => {
-        const noStudy = [{ path: "structured.weeklyAvailability", message: "Në këtë periudhë nuk mbetet asnjë ditë për mësim. Ndrysho datat, ditët e lira ose ditët pa mësim." }];
+        const noStudy = [{ path: "structured.weeklyAvailability", message: "No day is left for study in this period. Change the dates, the free days or the days without study." }];
         const freeOn = (f: PlanFormState, day: "mon" | "sat") => (f.days[day] = { mode: "free", windows: [{ start: "08:00", end: "10:00" }] });
 
         // Wednesday 14 to Thursday 15 October, but only Saturday is free.
@@ -440,7 +440,7 @@ describe("the plan form", () => {
 
     test("limits: too many windows, commitments or dates are refused", () => {
         const window = { start: "08:00", end: "08:20" };
-        expect(errorsOf((f) => (f.days.mon = { mode: "free", windows: Array.from({ length: 9 }, (_, i) => ({ start: `${String(8 + i).padStart(2, "0")}:00`, end: `${String(8 + i).padStart(2, "0")}:20` })) }))[0]).toEqual({ path: "structured.weeklyAvailability.0.windows", message: "Ke shtuar më shumë se sa lejohet." });
+        expect(errorsOf((f) => (f.days.mon = { mode: "free", windows: Array.from({ length: 9 }, (_, i) => ({ start: `${String(8 + i).padStart(2, "0")}:00`, end: `${String(8 + i).padStart(2, "0")}:20` })) }))[0]).toEqual({ path: "structured.weeklyAvailability.0.windows", message: "You added more than is allowed." });
         expect(errorsOf((f) => (f.commitments = Array(41).fill({ label: "x", kind: "other", days: [], start: window.start, end: window.end })))[0]?.path).toBe("structured.commitments");
         expect(errorsOf((f) => (f.unavailableDates = Array.from({ length: 181 }, (_, i) => addDays("2026-10-14", i))))[0]?.path).toBe("structured.unavailableDates");
     });

@@ -24,10 +24,10 @@ export function WeekScreen() {
     if (state.plans.length === 0) {
         return (
             <>
-                <ScreenTitle title="Orari" />
-                <Empty title="Ende s'ke orar">
+                <ScreenTitle title="Week" />
+                <Empty title="No schedule yet">
                     <Link to={{ name: "newPlan" }} className={buttonClass("primary", "self-start")}>
-                        Krijo planin e parë
+                        Create your first plan
                     </Link>
                 </Empty>
             </>
@@ -43,14 +43,14 @@ export function WeekScreen() {
 
     return (
         <>
-            <ScreenTitle eyebrow={`${shortDate(days[0]!)} – ${shortDate(days[6]!)}`} title="Orari i javës" />
+            <ScreenTitle eyebrow={`${shortDate(days[0]!)} – ${shortDate(days[6]!)}`} title="This week" />
 
             <div className="flex flex-wrap gap-2" role="group" aria-label="Java">
                 <Button onClick={() => setOffset(offset - 1)}>← Java e kaluar</Button>
                 <Button onClick={() => setOffset(0)} disabled={offset === 0}>
-                    Kjo javë
+                    This week
                 </Button>
-                <Button onClick={() => setOffset(offset + 1)}>Java tjetër →</Button>
+                <Button onClick={() => setOffset(offset + 1)}>Next week →</Button>
             </div>
 
             <div className="grid gap-4 blocks:xl:grid-cols-7 blocks:xl:gap-2">

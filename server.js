@@ -35,7 +35,7 @@ if (!AI_CONFIGURED) {
     // We do NOT exit here - the server should still boot so the frontend
     // loads and can show a clear "AI not configured" message instead of
     // the whole app being unreachable.
-    console.error(`WARNING: ${provider.keyName} mungon në .env - funksionet AI do të kthejnë gabim.`);
+    console.error(`WARNING: ${provider.keyName} is missing from .env - the AI features will return an error.`);
 }
 
 const models = provider.models;
@@ -149,7 +149,7 @@ const server = app.listen(PORT, ...(HOST ? [HOST] : []), () => {
 
 server.on("error", (error) => {
     if (error.code === "EADDRINUSE") {
-        console.error(`Porti ${PORT} është duke u përdorur.`);
+        console.error(`Port ${PORT} is already in use.`);
         process.exit(1);
     }
     console.error("SERVER ERROR:", error);
@@ -157,11 +157,11 @@ server.on("error", (error) => {
 
 // SIGTERM is what hosts send on a deploy or a stop: finish what is running, close the database, leave.
 function shutdown() {
-    console.log("\nDuke mbyllur StudyFlow...");
+    console.log("\nShutting StudyFlow down...");
     setTimeout(() => process.exit(1), 10_000).unref();
     server.close(async () => {
         await pool?.end().catch(() => undefined);
-        console.log("StudyFlow u mbyll.");
+        console.log("StudyFlow stopped.");
         process.exit(0);
     });
 }

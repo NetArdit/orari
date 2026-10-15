@@ -20,11 +20,11 @@ export function TodayScreen() {
     if (plans.length === 0) {
         return (
             <>
-                <ScreenTitle eyebrow={dayLabel(clock.today)} title="Sot" />
-                <Empty title="Ende s'ke orar">
-                    <p className="text-muted">Krijoje të parin për dy minuta: trego çfarë ke për të mësuar, deri kur, dhe kur je e lirë.</p>
+                <ScreenTitle eyebrow={dayLabel(clock.today)} title="Today" />
+                <Empty title="No schedule yet">
+                    <p className="text-muted">Create your first one in two minutes: say what you want to learn, until when, and when you are free.</p>
                     <Link to={{ name: "newPlan" }} className={buttonClass("primary", "self-start")}>
-                        Krijo planin e parë
+                        Create your first plan
                     </Link>
                 </Empty>
             </>
@@ -43,38 +43,38 @@ export function TodayScreen() {
 
     return (
         <>
-            <ScreenTitle eyebrow={dayLabel(clock.today)} title="Sot">
+            <ScreenTitle eyebrow={dayLabel(clock.today)} title="Today">
                 {agenda.length > 0 && (
                     <p className="text-muted">
-                        {doneToday} nga {agenda.length} seanca të kryera{streak > 1 ? ` · ${streak} ditë rresht` : ""}
+                        {doneToday} of {agenda.length} sessions done{streak > 1 ? ` · ${streak} days in a row` : ""}
                     </p>
                 )}
             </ScreenTitle>
 
             {state.saveError && (
-                <Notice look="bad" role="alert" title="Ndryshimi nuk u ruajt në këtë pajisje">
-                    <p className="text-sm">Shënimi u kthye mbrapa. Provo përsëri.</p>
+                <Notice look="bad" role="alert" title="The change was not saved on this device">
+                    <p className="text-sm">The mark was undone. Try again.</p>
                     <Button look="quiet" className="self-start" onClick={() => store.dismissSaveError()}>
-                        Në rregull
+                        OK
                     </Button>
                 </Notice>
             )}
 
             {behind && replanState.status !== "done" && (
-                <Notice look="warn" title={`Ke seanca të humbura te "${behind.subject}"`}>
+                <Notice look="warn" title={`You have missed sessions in "${behind.subject}"`}>
                     {replanState.status === "idle" && (
                         <>
-                            <p className="text-sm">Mund ta rregullojmë pjesën e mbetur të planit që të futet në kohën që ke.</p>
-                            <Button look="primary" className="self-start" onClick={() => replan.start({ planId: behind.id, profile: profile ?? { name: "Nxënës", educationLevel: null } })}>
-                                Rregulloje planin
+                            <p className="text-sm">We can rearrange the rest of the plan so that it fits the time you have.</p>
+                            <Button look="primary" className="self-start" onClick={() => replan.start({ planId: behind.id, profile: profile ?? { name: "Student", educationLevel: null } })}>
+                                Rearrange the plan
                             </Button>
                         </>
                     )}
                     {replanState.status === "working" && (
                         <div role="status" className="flex flex-col gap-2">
-                            <p className="text-sm">Po e rregullojmë planin… zakonisht merr më pak se një minutë.</p>
+                            <p className="text-sm">Rearranging the plan… this usually takes under a minute.</p>
                             <Button className="self-start" onClick={() => replan.cancel()}>
-                                Ndale
+                                Stop
                             </Button>
                         </div>
                     )}
@@ -83,11 +83,11 @@ export function TodayScreen() {
                             <p className="text-sm">{replanState.failure.message}</p>
                             <AccountRecovery kind={replanState.failure.kind} />
                             <div className="flex flex-wrap gap-2">
-                                <Button look="primary" onClick={() => { replan.reset(); replan.start({ planId: behind.id, profile: profile ?? { name: "Nxënës", educationLevel: null } }); }}>
-                                    Provo përsëri
+                                <Button look="primary" onClick={() => { replan.reset(); replan.start({ planId: behind.id, profile: profile ?? { name: "Student", educationLevel: null } }); }}>
+                                    Try again
                                 </Button>
                                 <Button look="quiet" onClick={() => replan.reset()}>
-                                    Mbyll
+                                    Close
                                 </Button>
                             </div>
                         </div>
@@ -96,26 +96,26 @@ export function TodayScreen() {
             )}
 
             {replanState.status === "done" && (
-                <Notice look="ok" role="status" title="Plani u rregullua">
+                <Notice look="ok" role="status" title="The plan was rearranged">
                     <p className="text-sm">
-                        {replanState.result.added} seanca të reja. Çfarë ke kryer mbetet siç ishte.
-                        {replanState.result.alreadyOver > 0 ? ` ${replanState.result.alreadyOver} prej tyre janë sot, në orë që kanë kaluar.` : ""}
+                        {replanState.result.added} new sessions. What you have already done stays as it was.
+                        {replanState.result.alreadyOver > 0 ? ` ${replanState.result.alreadyOver} of them are today, at hours that have already passed.` : ""}
                     </p>
                     <Button look="quiet" className="self-start" onClick={() => replan.reset()}>
-                        Në rregull
+                        OK
                     </Button>
                 </Notice>
             )}
 
             {next ? (
-                <section aria-label="Seanca e radhës" className="accent-surface flex flex-col gap-3 rounded-l bg-raised p-5 shadow-raised notebook:bg-accent notebook:text-on-accent blocks:border blocks:border-line">
+                <section aria-label="Next session" className="accent-surface flex flex-col gap-3 rounded-l bg-raised p-5 shadow-raised notebook:bg-accent notebook:text-on-accent blocks:border blocks:border-line">
                     <p className="text-[13px] opacity-80">
-                        Seanca e radhës · {next.subject}
+                        Next session · {next.subject}
                         {next.session.date !== clock.today ? ` · ${dayLabel(next.session.date)}` : ""}
                     </p>
                     <p className="flex items-baseline gap-3">
                         <span className="font-time text-3xl font-bold tabular-nums tracking-tight blocks:text-4xl blocks:text-accent">{next.session.startTime}</span>
-                        <span className="text-sm opacity-80">{next.state === "now" ? "po vazhdon" : `deri ${next.session.endTime} · ${minutesLabel(durationMinutes(next.session))}`}</span>
+                        <span className="text-sm opacity-80">{next.state === "now" ? "in progress" : `until ${next.session.endTime} · ${minutesLabel(durationMinutes(next.session))}`}</span>
                     </p>
                     <h2 className="text-xl leading-snug">{next.session.title}</h2>
                     {next.session.tasks.length > 0 && (
@@ -127,20 +127,20 @@ export function TodayScreen() {
                     )}
                     <div className="flex flex-wrap gap-2 pt-1">
                         <Link to={{ name: "session", planId: next.planId, sessionId: next.session.id }} className={buttonClass("primary", "notebook:bg-on-accent notebook:text-accent")}>
-                            Hape seancën
+                            Open the session
                         </Link>
                     </div>
                 </section>
             ) : (
-                <Notice look="ok" title="S'ka seanca të tjera përpara">
-                    <p className="text-sm">{progress.remaining === 0 ? "Gjithçka e planifikuar është kryer ose ka kaluar." : "Seancat e radhës janë në ditët e ardhshme."}</p>
+                <Notice look="ok" title="No more sessions ahead">
+                    <p className="text-sm">{progress.remaining === 0 ? "Everything planned is done or has passed." : "The next sessions are on the coming days."}</p>
                 </Notice>
             )}
 
-            <section aria-label="Sot" className="flex flex-col gap-2">
-                <h2 className="text-base font-semibold text-muted">Sot</h2>
+            <section aria-label="Today" className="flex flex-col gap-2">
+                <h2 className="text-base font-semibold text-muted">Today</h2>
                 {agenda.length === 0 ? (
-                    <p className="text-muted">Nuk ke seanca të planifikuara sot.</p>
+                    <p className="text-muted">You have no sessions planned today.</p>
                 ) : (
                     <ul className="flex flex-col gap-2 notebook:gap-0">
                         {agenda.map((item) => (
@@ -152,9 +152,9 @@ export function TodayScreen() {
 
             <dl className="grid grid-cols-3 gap-2 text-center">
                 {[
-                    ["Kryer", String(progress.done + progress.partial)],
-                    ["Të humbura", String(progress.missed)],
-                    ["Përpara", String(progress.remaining)],
+                    ["Done", String(progress.done + progress.partial)],
+                    ["Missed", String(progress.missed)],
+                    ["Ahead", String(progress.remaining)],
                 ].map(([label, value]) => (
                     <div key={label} className="rounded-m bg-sunk p-3">
                         <dd className="font-time text-2xl font-bold tabular-nums">{value}</dd>
