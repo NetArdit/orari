@@ -43,10 +43,10 @@ export function WeekScreen() {
 
     return (
         <>
-            <ScreenTitle eyebrow={`${shortDate(days[0]!)} – ${shortDate(days[6]!)}`} title="This week" />
+            <ScreenTitle eyebrow={`${shortDate(days[0]!)} – ${shortDate(days[6]!)}`} title={offset === 0 ? "This week" : offset === -1 ? "Last week" : offset === 1 ? "Next week" : "Week"} />
 
-            <div className="flex flex-wrap gap-2" role="group" aria-label="Java">
-                <Button onClick={() => setOffset(offset - 1)}>← Java e kaluar</Button>
+            <div className="flex flex-wrap gap-2" role="group" aria-label="Week">
+                <Button onClick={() => setOffset(offset - 1)}>← Previous week</Button>
                 <Button onClick={() => setOffset(0)} disabled={offset === 0}>
                     This week
                 </Button>
@@ -62,10 +62,10 @@ export function WeekScreen() {
                             <h2 className="flex items-baseline gap-2 border-b-2 border-ink pb-1 text-sm font-semibold notebook:border-line blocks:border-line blocks:font-time blocks:text-xs blocks:uppercase">
                                 <span>{weekdayShort(date)}</span>
                                 <span className={`text-lg ${isToday ? "text-accent" : ""}`}>{date.slice(8).replace(/^0/, "")}</span>
-                                {isToday && <span className="text-xs text-accent">sot</span>}
+                                {isToday && <span className="text-xs text-accent">today</span>}
                             </h2>
                             {ofDay.length === 0 ? (
-                                <p className="py-1 text-[13px] text-muted">Pa seanca.</p>
+                                <p className="py-1 text-[13px] text-muted">No sessions.</p>
                             ) : (
                                 <ul className="flex flex-col gap-2 notebook:gap-0">
                                     {ofDay.map((item) => (

@@ -550,13 +550,13 @@ describe("calendar export", () => {
         const ics = planToIcs(p, { now: NOW });
         const lines = ics.replace(/\r\n /g, "").split("\r\n");
 
-        expect(lines.slice(0, 6)).toEqual(["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Planifikuesi//Orari i mesimit//SQ", "CALSCALE:GREGORIAN", "METHOD:PUBLISH", "X-WR-CALNAME:Matematikë"]);
+        expect(lines.slice(0, 6)).toEqual(["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Orari//Study planner//EN", "CALSCALE:GREGORIAN", "METHOD:PUBLISH", "X-WR-CALNAME:Matematikë"]);
         expect(lines.filter((l) => l.startsWith("SUMMARY:"))).toEqual(["SUMMARY:Matematikë: Përgjysmë", "SUMMARY:Matematikë: Derivatet\\; rregullat\\, bazë", "SUMMARY:Matematikë: E dyta"]);
         expect(lines).toContain("UID:abc@planifikuesi");
         expect(lines).toContain("DTSTAMP:20261014T100000Z");
         expect(lines).toContain("DTSTART:20261015T173000");
         expect(lines).toContain("DTEND:20261015T183000");
-        expect(lines).toContain("DESCRIPTION:Rregullat\\nbazë\\nMateriali: Kapitulli 4\\n• Lexo faqet 84–91\\n• Zgjidh 1\\, 2\\, 3");
+        expect(lines).toContain("DESCRIPTION:Rregullat\\nbazë\\nMaterial: Kapitulli 4\\n• Lexo faqet 84–91\\n• Zgjidh 1\\, 2\\, 3");
         expect(lines.at(-2)).toBe("END:VCALENDAR");
         expect(ics.endsWith("\r\n")).toBe(true);
         expect(ics.includes("\n") && !/[^\r]\n/.test(ics)).toBe(true); // CRLF only
@@ -573,7 +573,7 @@ describe("calendar export", () => {
     test("only from a given date on, if asked; an empty plan is still a valid empty calendar", () => {
         const p = plan([session("2026-10-13", "08:00", "09:00"), session("2026-10-15", "08:00", "09:00")]);
         expect(planToIcs(p, { now: NOW, from: "2026-10-14" }).match(/BEGIN:VEVENT/g)).toHaveLength(1);
-        expect(planToIcs(plan([]), { now: NOW })).toBe("BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//Planifikuesi//Orari i mesimit//SQ\r\nCALSCALE:GREGORIAN\r\nMETHOD:PUBLISH\r\nX-WR-CALNAME:Matematikë\r\nEND:VCALENDAR\r\n");
+        expect(planToIcs(plan([]), { now: NOW })).toBe("BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//Orari//Study planner//EN\r\nCALSCALE:GREGORIAN\r\nMETHOD:PUBLISH\r\nX-WR-CALNAME:Matematikë\r\nEND:VCALENDAR\r\n");
     });
 
     test("file names are plain ASCII", () => {

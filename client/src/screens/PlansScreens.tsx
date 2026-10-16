@@ -18,7 +18,7 @@ export function PlansScreen() {
         <>
             <ScreenTitle title="Plans" />
             {state.unreadable.length > 0 && (
-                <Notice look="warn" title={`${state.unreadable.length} plan cannot be read`}>
+                <Notice look="warn" title={state.unreadable.length === 1 ? "1 plan cannot be read" : `${state.unreadable.length} plans cannot be read`}>
                     <p className="text-sm">They are still on this device and have not been deleted.</p>
                 </Notice>
             )}
@@ -65,7 +65,7 @@ export function PlanScreen({ planId }: { planId: string }) {
         return (
             <Empty title="This plan is not on this device">
                 <Link to={{ name: "plans" }} className={buttonClass("secondary", "self-start")}>
-                    To the plans
+                    Back to Plans
                 </Link>
             </Empty>
         );
@@ -162,7 +162,7 @@ export function PlanScreen({ planId }: { planId: string }) {
                 </section>
             )}
             {plan.warnings.length > 0 && (
-                <Notice look="warn" title="Kujdes">
+                <Notice look="warn" title="Please note">
                     <ul className="ml-5 list-disc text-sm">
                         {plan.warnings.map((w) => (
                             <li key={w}>{w}</li>
@@ -233,7 +233,7 @@ export function SessionScreen({ planId, sessionId }: { planId: string; sessionId
             )}
             {session.tasks.length > 0 && (
                 <section className="flex flex-col gap-2">
-                    <h2 className="text-base font-semibold">What to do in this hour</h2>
+                    <h2 className="text-base font-semibold">What to do in this session</h2>
                     <ul className="flex flex-col gap-2">
                         {session.tasks.map((task) => (
                             <li key={task} className="rounded-m bg-sunk px-3 py-2.5">

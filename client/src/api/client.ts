@@ -44,7 +44,7 @@ export type ApiFailureKind =
 export interface ApiFailure {
     ok: false;
     kind: ApiFailureKind;
-    /** Albanian, safe to show. From the server when it sent one. */
+    /** English, safe to show. From the server when it sent one. */
     message: string;
     /** The server's own name for what happened, when it sent one. */
     code?: ErrorCode;

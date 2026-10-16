@@ -40,20 +40,20 @@ export function parsePath(pathname: string): Route {
     if (rest.length > 0) return notFound;
 
     if (first === undefined) return { name: "today" };
-    // The English addresses are the ones in use; the earlier Albanian ones still open the same screens.
+    // These English addresses are the ones in use.
     if ((first === "week" || first === "orari") && second === undefined) return { name: "week" };
     if ((first === "new-plan" || first === "plan-i-ri") && second === undefined) return { name: "newPlan" };
     if ((first === "settings" || first === "une") && second === undefined) return { name: "me" };
     if ((first === "sign-in" || first === "hyr") && second === undefined) return { name: "signIn" };
-    if ((first === "sign-up" || first === "regjistrohu") && second === undefined) return { name: "signUp" };
+    if (first === "sign-up" && second === undefined) return { name: "signUp" };
     if ((first === "forgot" || first === "harrova") && second === undefined) return { name: "forgot" };
     // These two paths are the ones the server puts in e-mails (lib/accounts/service.js); keep them in step.
     if (first === "reset" && second === undefined) return { name: "reset" };
     if (first === "verify" && second === undefined) return { name: "verify" };
-    if (first === "plans" || first === "planet") {
+    if (first === "plans") {
         if (second === undefined) return { name: "plans" };
         if (third === undefined) return { name: "plan", planId: second };
-        if ((third === "sessions" || third === "seanca") && fourth !== undefined) return { name: "session", planId: second, sessionId: fourth };
+        if (third === "sessions" && fourth !== undefined) return { name: "session", planId: second, sessionId: fourth };
     }
     return notFound;
 }

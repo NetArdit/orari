@@ -57,7 +57,7 @@ const utcStamp = (date: Date) => date.toISOString().replace(/[-:]/g, "").replace
 function description(session: StoredSession): string {
     const lines: string[] = [];
     if (session.goal) lines.push(session.goal);
-    if (session.material) lines.push(`Materiali: ${session.material}`);
+    if (session.material) lines.push(`Material: ${session.material}`);
     for (const task of session.tasks) lines.push(`• ${task}`);
     return lines.join("\n");
 }
@@ -80,7 +80,7 @@ export function planToIcs(plan: Pick<StoredPlan, "id" | "subject" | "sessions">,
         .filter((s) => !options.from || s.date >= options.from)
         .sort(byTime);
 
-    const lines = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Planifikuesi//Orari i mesimit//SQ", "CALSCALE:GREGORIAN", "METHOD:PUBLISH", `X-WR-CALNAME:${escapeText(plan.subject)}`];
+    const lines = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Orari//Study planner//EN", "CALSCALE:GREGORIAN", "METHOD:PUBLISH", `X-WR-CALNAME:${escapeText(plan.subject)}`];
 
     for (const session of sessions) {
         const details = description(session);
