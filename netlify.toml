@@ -1,0 +1,28 @@
+# Netlify: the pages are published as files, the API runs as one function, long AI work runs as a background
+# function and mail that was not sent is retried on a schedule.
+[build]
+  command = "npm run client:build && node scripts/netlify-publish.mjs"
+  publish = "netlify-dist"
+
+[build.environment]
+  NODE_VERSION = "24"
+
+[functions]
+  directory = "netlify/functions"
+  node_bundler = "esbuild"
+
+[functions."housekeeping"]
+  schedule = "@hourly"
+
+# The API. `force` so that no published file can ever answer in its place.
+[[redirects]]
+  from = "/api/*"
+  to = "/.netlify/functions/api/:splat"
+  status = 200
+  force = true
+
+# The app's own addresses all open its single page.
+[[redirects]]
+  from = "/app/*"
+  to = "/app/index.html"
+  status = 200

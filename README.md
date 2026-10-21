@@ -93,7 +93,7 @@ Errors are `{ error }` with a message in Albanian that is safe to show.
 
 The server is a long-running Node process (plan jobs, rate limits and sessions' dispatch run in it), so it needs a host that keeps a process alive: Render, Railway or Fly. Netlify and Vercel run short serverless functions and do not fit without a rewrite.
 
-1. **Database.** Create a project at neon.tech (or Supabase) and copy the connection string (`postgres://...?sslmode=require`). The server creates its tables itself at start (`lib/accounts/postgres/schema.sql`, all `IF NOT EXISTS`).
+1. **Database.** Create a project at neon.tech (or Supabase) and copy the connection string (`postgres://...?sslmode=require`). The server creates its tables itself at start (`lib/accounts/postgres/schemaSql.js`, all `IF NOT EXISTS`).
 2. **Mail.** Any SMTP provider (Brevo, Mailgun, Postmark, Gmail with an app password). `SMTP_URL=smtps://user:password@host:465`, `MAIL_FROM=Orari <address@your-domain>`. The sender must be allowed by the provider, or messages are refused; refused messages stay in the database outbox and are retried five times.
 3. **Service.** Push the repository to GitHub, create a Blueprint on render.com from `render.yaml`, and fill in the secrets: `DATABASE_URL`, `ORARI_BASE_URL` (the service's `https://` address), `SMTP_URL`, `MAIL_FROM`, `GROQ_API_KEY`. `TRUST_PROXY=1` is already set.
 4. **Check.** `https://<service>/api/health` answers; `https://<service>/app/` opens the new client; sign up, open the e-mailed link, sign in, save a plan.
@@ -101,3 +101,8 @@ The server is a long-running Node process (plan jobs, rate limits and sessions' 
 Run the same stack locally with real PostgreSQL: `node e2e/postgres-smoke.mjs` (embedded PostgreSQL and a local SMTP sink, no accounts anywhere).
 
 Not covered by any test: a real SMTP provider's delivery and spam handling, Neon/Supabase specifics (connection limits, cold starts of the database), and the real reverse proxy of the host.
+
+## Deploying on Netlify (no process that stays up)
+
+`netlify.toml` publishes the pages from `netlify-dist/`, runs the whole API as one function (`netlify/functions/api.js`), runs the AI work of a plan as a background function (`job-background.js`, up to 15 minutes, answered 202 at once) and retries unsent mail hourly (`housekeeping.js`). Jobs live in the PostgreSQL table `jobs` (`lib/jobsDb.js`), so a poll finds the answer whichever instance serves it. Environment variables are the same as for Render, plus `ORARI_BASE_URL` set to the site's own address. The site must have visitor protection off, or the function cannot call itself.
+Limits that matter at no cost: per-client AI rate limits are counted per warm function instance (weaker than on one server); a cancelled job is marked cancelled but the running AI call is not interrupted; the free Netlify plan counts credits per production deploy.

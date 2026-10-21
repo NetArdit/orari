@@ -8,10 +8,7 @@ import { createPwnedCheck } from "./lib/accounts/pwned.js";
 import { createAccountService } from "./lib/accounts/service.js";
 import { checkMemoryAccountsEnvironment } from "./lib/accounts/localOnly.js";
 import { createTestMail } from "./lib/accounts/testMail.js";
-import { createSmtpMail, createSmtpTransport } from "./lib/accounts/smtpMail.js";
-import { createPool, migrate } from "./lib/accounts/postgres/connect.js";
-import { createPostgresAccountsRepository } from "./lib/accounts/postgres/repository.js";
-import { createLinkSealer, withSealedOutbox } from "./lib/accounts/postgres/sealedOutbox.js";
+import { composePostgres } from "./lib/composePostgres.js";
 
 dotenv.config();
 
@@ -51,46 +48,18 @@ let accounts = null;
 let pool = null;
 let HOST = process.env.HOST || undefined;
 if (process.env.ACCOUNTS_MODE === "postgres") {
-    const missing = ["DATABASE_URL", "SMTP_URL", "MAIL_FROM", "ORARI_BASE_URL", "OUTBOX_SECRET"].filter((name) => !process.env[name]);
-    if (missing.length > 0) {
-        console.error("ERROR: ACCOUNTS_MODE=postgres needs " + missing.join(", ") + ".");
-        process.exit(1);
-    }
-    const baseUrl = process.env.ORARI_BASE_URL.replace(/\/$/, "");
-    let publicOrigin;
+    let composed;
     try {
-        publicOrigin = new URL(baseUrl);
-    } catch {
-        console.error("ERROR: ORARI_BASE_URL is not a valid address.");
-        process.exit(1);
-    }
-    const local = ["localhost", "127.0.0.1"].includes(publicOrigin.hostname);
-    if (publicOrigin.protocol !== "https:" && !local) {
-        console.error("ERROR: ORARI_BASE_URL must be https:// (the session cookie is Secure).");
-        process.exit(1);
-    }
-    try {
-        pool = createPool({ connectionString: process.env.DATABASE_URL });
-        await migrate(pool);
+        composed = await composePostgres(process.env);
     } catch (error) {
-        console.error("ERROR: the database is not reachable or the schema could not be applied:", error.message);
+        console.error("ERROR:", error.message);
         process.exit(1);
     }
-    const service = createAccountService({
-        // The links of queued e-mails are sealed with OUTBOX_SECRET before they reach the database.
-        repo: withSealedOutbox(createPostgresAccountsRepository({ pool }), createLinkSealer(process.env.OUTBOX_SECRET)),
-        hasher: createPasswordHasher(),
-        mail: createSmtpMail({ transport: createSmtpTransport(process.env), from: process.env.MAIL_FROM }),
-        passwordCheck: createPwnedCheck(),
-        baseUrl,
-    });
+    pool = composed.pool;
+    accounts = composed.accounts;
     // Mail that could not be sent stays in the database outbox and is retried here (and by any other instance).
-    service.dispatchMail().catch(() => undefined);
-    setInterval(() => service.dispatchMail().catch(() => undefined), 30_000).unref();
-    accounts = {
-        ...createAccounts({ service, allowedOrigins: [publicOrigin.origin], secureCookies: !local || process.env.ORARI_INSECURE_COOKIES !== "1" }),
-        mode: "postgres",
-    };
+    composed.service.dispatchMail().catch(() => undefined);
+    setInterval(() => composed.service.dispatchMail().catch(() => undefined), 30_000).unref();
     console.error("ACCOUNTS_MODE=postgres: accounts and plans are stored in PostgreSQL; mail goes out over SMTP.");
 } else if (process.env.ACCOUNTS_MODE === "memory") {
     const environment = checkMemoryAccountsEnvironment(process.env);
