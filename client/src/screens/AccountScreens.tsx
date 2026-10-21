@@ -531,8 +531,7 @@ export function AccountPanel() {
     if (state.status === "loading") return null;
 
     return (
-        <section aria-label="Account" className="flex flex-col gap-4">
-            <h2 className="text-lg font-semibold">Account</h2>
+        <section aria-label="Account" className="flex flex-col gap-3">
             <ModeNotice />
             {state.status === "signedOut" && (
                 <div className="flex flex-wrap gap-2">
@@ -546,9 +545,13 @@ export function AccountPanel() {
             )}
             {state.status === "signedIn" && (
                 <>
-                    <p data-testid="account-summary">
-                        <span className="font-semibold">{state.user.name}</span> · <span className="text-muted">{state.user.email}</span>
-                    </p>
+                    <div className="flex items-center gap-3 rounded-m bg-sunk p-4" data-testid="account-summary">
+                        <span aria-hidden="true" className="grid size-12 shrink-0 place-items-center rounded-full bg-accent text-lg font-bold text-on-accent">{state.user.name.trim().charAt(0).toUpperCase() || "?"}</span>
+                        <p className="min-w-0">
+                            <span className="block truncate font-semibold">{state.user.name}</span>
+                            <span className="block truncate text-sm text-muted">{state.user.email}</span>
+                        </p>
+                    </div>
                     {!state.user.emailVerified && (
                         <Notice look="warn" title="Your e-mail is not confirmed">
                             <p className="text-sm">The AI opens once you confirm it.</p>
@@ -563,18 +566,33 @@ export function AccountPanel() {
                     )}
                     {error && <p role="alert" className="text-sm font-semibold text-bad">{error}</p>}
 
-                    <div className="flex flex-col gap-3 rounded-m bg-sunk p-4" data-testid="account-name">
-                        <h3 className="text-base font-semibold">Name</h3>
-                        <NameForm initial={state.user.name} />
-                    </div>
-                    <div className="flex flex-col gap-3 rounded-m bg-sunk p-4" data-testid="account-email">
-                        <h3 className="text-base font-semibold">E-mail</h3>
-                        <EmailForm current={state.user.email} />
-                    </div>
-                    <div className="flex flex-col gap-3 rounded-m bg-sunk p-4" data-testid="account-password">
-                        <h3 className="text-base font-semibold">Password</h3>
-                        <PasswordForm />
-                    </div>
+                    <details className="group rounded-m border border-line bg-raised" data-testid="account-name">
+                        <summary className="flex min-h-14 cursor-pointer list-none items-center justify-between gap-3 px-4 font-semibold">
+                            <span>Name<span className="block text-[13px] font-normal text-muted">Shown on your account</span></span>
+                            <span aria-hidden="true" className="text-muted transition-transform group-open:rotate-180">⌄</span>
+                        </summary>
+                        <div className="border-t border-line p-4">
+                            <NameForm initial={state.user.name} />
+                        </div>
+                    </details>
+                    <details className="group rounded-m border border-line bg-raised" data-testid="account-email">
+                        <summary className="flex min-h-14 cursor-pointer list-none items-center justify-between gap-3 px-4 font-semibold">
+                            <span>E-mail<span className="block text-[13px] font-normal text-muted">{state.user.email}</span></span>
+                            <span aria-hidden="true" className="text-muted transition-transform group-open:rotate-180">⌄</span>
+                        </summary>
+                        <div className="border-t border-line p-4">
+                            <EmailForm current={state.user.email} />
+                        </div>
+                    </details>
+                    <details className="group rounded-m border border-line bg-raised" data-testid="account-password">
+                        <summary className="flex min-h-14 cursor-pointer list-none items-center justify-between gap-3 px-4 font-semibold">
+                            <span>Password<span className="block text-[13px] font-normal text-muted">Change it, other devices are signed out</span></span>
+                            <span aria-hidden="true" className="text-muted transition-transform group-open:rotate-180">⌄</span>
+                        </summary>
+                        <div className="border-t border-line p-4">
+                            <PasswordForm />
+                        </div>
+                    </details>
                 </>
             )}
         </section>

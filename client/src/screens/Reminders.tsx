@@ -74,11 +74,12 @@ export function RemindersPanel() {
 
     const customValid = custom !== "" && validLead(Number(custom));
     return (
-        <section aria-label="Reminders" className="flex flex-col gap-3" data-testid="reminders">
-            <h2 className="text-lg font-semibold">Reminders</h2>
+        <section aria-label="Reminders" className="flex flex-col gap-4" data-testid="reminders">
             <p className="text-[13px] text-muted">Orari reminders are notifications from Orari itself. They are separate from the alarm you can put into a calendar file (set on the plan page), which belongs to your calendar app.</p>
 
-            <label className="flex items-center gap-2 text-sm">
+            <div className="flex flex-col gap-3 rounded-m border border-line bg-raised p-4">
+            <h3 className="text-base font-semibold">When to remind you</h3>
+            <label className="flex flex-wrap items-center gap-2 text-sm">
                 <span className="font-semibold">Remind me</span>
                 <select
                     value={prefs.leadMinutes === null ? "" : String(prefs.leadMinutes)}
@@ -103,6 +104,10 @@ export function RemindersPanel() {
                     Use it
                 </Button>
             </div>
+            </div>
+
+            <div className="flex flex-col gap-3 rounded-m border border-line bg-raised p-4">
+            <h3 className="text-base font-semibold">Quiet hours and privacy</h3>
 
             <fieldset className="flex flex-wrap items-center gap-3 text-sm">
                 <legend className="mb-1 font-semibold">Quiet hours and limit (suggested defaults: 22:00 to 08:00, 5 a day)</legend>
@@ -121,12 +126,14 @@ export function RemindersPanel() {
                 <Button onClick={() => change({ ...DEFAULT_PREFS, leadMinutes: prefs.leadMinutes, showDetails: prefs.showDetails })}>Back to the defaults</Button>
             </fieldset>
 
-            <label className="flex min-h-11 items-start gap-3 text-sm">
+            <label className="flex min-h-11 items-start gap-3 border-t border-line pt-3 text-sm">
                 <input type="checkbox" checked={prefs.showDetails} onChange={(e) => change({ ...prefs, showDetails: e.target.checked })} className="mt-1 size-5 accent-[var(--accent)]" />
                 <span>Show the subject and time in the notification. Off by default: a lock screen then shows only general text, and the text is stored on the server only as you chose.</span>
             </label>
 
-            <div className="flex flex-col gap-2 rounded-m bg-sunk p-4" data-testid="push-state" data-state={support}>
+            </div>
+
+            <div className="flex flex-col gap-2 rounded-m border border-line bg-raised p-4" data-testid="push-state" data-state={support}>
                 <h3 className="text-base font-semibold">Notifications on this device</h3>
                 {!verified && <p className="text-sm">Sign in with a confirmed e-mail to get notifications. Without them, the list in the app still shows what is due and what was missed.</p>}
                 {verified && support === "loading" && <p className="text-sm text-muted">Checking this device…</p>}
