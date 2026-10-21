@@ -67,6 +67,11 @@ export interface IcsOptions {
     now: Date;
     /** Leave out sessions before this date (YYYY-MM-DD). Default: include all. */
     from?: string;
+    /**
+     * A calendar reminder (VALARM) this many minutes before each event, 0 = at the start; omitted or null = none.
+     * It is an alarm inside the file: whether the calendar app honours it is up to that app, not to Orari.
+     */
+    reminderMinutes?: number | null;
 }
 
 /**
@@ -92,6 +97,9 @@ export function planToIcs(plan: Pick<StoredPlan, "id" | "subject" | "sessions">,
             `DTEND:${stamp(session.date, session.endTime)}`,
             `SUMMARY:${escapeText(`${plan.subject}: ${session.title}`)}`,
             ...(details ? [`DESCRIPTION:${escapeText(details)}`] : []),
+            ...(options.reminderMinutes === undefined || options.reminderMinutes === null
+                ? []
+                : ["BEGIN:VALARM", "ACTION:DISPLAY", "DESCRIPTION:Study session", `TRIGGER:${options.reminderMinutes === 0 ? "PT0S" : `-PT${options.reminderMinutes}M`}`, "END:VALARM"]),
             "END:VEVENT"
         );
     }

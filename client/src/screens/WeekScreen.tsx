@@ -36,7 +36,7 @@ export function WeekScreen() {
 
     const start = addDays(mondayOf(clock.today), offset * 7);
     const days = Array.from({ length: 7 }, (_, i) => addDays(start, i));
-    const items: AgendaItem[] = state.plans.flatMap((plan) =>
+    const items: AgendaItem[] = state.plans.filter((plan) => plan.state !== "draft").flatMap((plan) =>
         plan.sessions.map((session) => ({ planId: plan.id, subject: plan.subject, session, state: sessionState(session, clock) }))
     );
     const mark = (planId: string, sessionId: string) => (status: SessionStatus) => void store.markSession(planId, sessionId, status);

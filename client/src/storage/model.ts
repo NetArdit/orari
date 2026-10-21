@@ -41,6 +41,10 @@ export const StoredPlan = z.object({
     /** The inputs the plan was made from; sent back to the server when the plan is adjusted. Kept as given. */
     structured: z.record(z.unknown()),
     sessions: z.array(StoredSession).max(2000),
+    /** An AI plan is a draft until the person publishes it; a draft is on no schedule and in no export. Plans from before drafts existed are published. */
+    state: z.enum(["draft", "published"]).catch("published").optional(),
+    /** When it was published; the same plan published twice stays published once. */
+    publishedAt: z.string().nullable().catch(null).optional(),
 });
 
 /** A local profile. No password and no e-mail: there is no account, the data lives on this device. */

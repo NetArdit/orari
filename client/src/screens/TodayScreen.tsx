@@ -33,10 +33,11 @@ export function TodayScreen() {
 
     const agenda = todayAgenda(plans, clock);
     const next = nextSession(plans, clock);
-    const allSessions = plans.flatMap((p) => p.sessions);
+    const allSessions = plans.filter((p) => p.state !== "draft").flatMap((p) => p.sessions);
     const progress = progressOf(allSessions, clock);
     const streak = streakDays(allSessions, clock);
-    const behind = plans.find((p) => p.id === currentPlan(plans, clock)?.id && needsReplan(p, clock)) ?? plans.find((p) => needsReplan(p, clock));
+    const live = plans.filter((p) => p.state !== "draft");
+    const behind = live.find((p) => p.id === currentPlan(plans, clock)?.id && needsReplan(p, clock)) ?? live.find((p) => needsReplan(p, clock));
     const doneToday = agenda.filter((i) => i.state === "done" || i.state === "partial").length;
 
     const mark = (planId: string, sessionId: string) => (status: SessionStatus) => void store.markSession(planId, sessionId, status);

@@ -111,5 +111,7 @@ export function planFromAnswer(answer: PlanAnswer, structured: Record<string, un
         warnings: answer.warnings,
         structured,
         sessions: sessions.sort(byTime),
+        state: "draft",
+        publishedAt: null,
     };
 }

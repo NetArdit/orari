@@ -118,7 +118,7 @@ export interface AgendaItem {
 }
 
 const itemsOf = (plans: readonly StoredPlan[], clock: Clock): AgendaItem[] =>
-    plans.flatMap((plan) => plan.sessions.map((session) => ({ planId: plan.id, subject: plan.subject, session, state: sessionState(session, clock) })));
+    plans.filter((plan) => plan.state !== "draft").flatMap((plan) => plan.sessions.map((session) => ({ planId: plan.id, subject: plan.subject, session, state: sessionState(session, clock) })));
 
 /** Everything dated today, across all plans, in time order, whatever its state. */
 export function todayAgenda(plans: readonly StoredPlan[], clock: Clock): AgendaItem[] {
