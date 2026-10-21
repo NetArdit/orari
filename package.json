@@ -7,7 +7,7 @@
     "start": "node server.js",
     "dev": "node --watch server.js",
     "test": "node --test --test-timeout=120000 \"test/**/*.test.js\"",
-    "test:pg": "node --test --test-concurrency=1 --test-timeout=240000 test/accounts-repository-contract.test.js test/accounts-postgres-flow.test.js test/sealed-outbox.test.js test/jobs-db.test.js",
+    "test:pg": "node --test --test-concurrency=1 --test-timeout=240000 test/accounts-repository-contract.test.js test/accounts-postgres-flow.test.js test/sealed-outbox.test.js test/jobs-db.test.js test/push-db.test.js",
     "check": "node --check server.js && node --check lib/app.js && node --check lib/plan.js && node --check lib/ai.js && node --check lib/schema.js && node --check lib/time.js && node --check lib/accounts/password.js && node --check lib/accounts/pwned.js && node --check lib/accounts/memoryRepository.js && node --check lib/accounts/service.js && node --check lib/accounts/http.js && node --check lib/accounts/testMail.js && node --check lib/accounts/localOnly.js && node --check lib/jobs.js && node --check lib/accounts/postgres/repository.js && node --check lib/accounts/postgres/connect.js && node --check lib/accounts/smtpMail.js && node --check lib/accounts/postgres/sealedOutbox.js && node --check lib/jobsDb.js && node --check lib/composePostgres.js",
     "client:dev": "vite client",
     "client:build": "tsc -p client && vite build client",
@@ -27,6 +27,7 @@
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
     "serverless-http": "^4.0.0",
+    "web-push": "^3.6.7",
     "zod": "^3.24.1"
   },
   "engines": {

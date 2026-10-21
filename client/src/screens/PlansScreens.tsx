@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { byTime } from "../domain/clock.ts";
 import { icsFileName, planToIcs } from "../domain/ics.ts";
 import { needsReplan, progressOf, sessionState } from "../domain/progress.ts";
@@ -8,6 +8,8 @@ import { useClock, useFlow, useServices, useStoreState } from "../app/services.t
 import { Button, buttonClass, Empty, KindLabel, Link, Marks, Notice, ScreenTitle, SessionRow, StatePill, TimeRange } from "../ui/primitives.tsx";
 import { dayLabel, shortDate } from "../ui/text.ts";
 import type { SessionStatus, StoredPlan } from "../storage/model.ts";
+import { RescheduleProposal } from "./Review.tsx";
+import { signatureOf } from "../domain/schedule.ts";
 import { capacityNeeded, publish, readCapacity, validatePlan, writeCapacity } from "../domain/validate.ts";
 
 export function PlansScreen() {
@@ -85,8 +87,18 @@ export function PlanScreen({ planId }: { planId: string }) {
     const byDate = new Map<string, typeof plan.sessions>();
     for (const s of [...plan.sessions].sort(byTime)) byDate.set(s.date, [...(byDate.get(s.date) ?? []), s]);
 
+    const [exportStatus, setExportStatus] = useState<ExportRecord | "failed" | null>(() => readExport(plan.id));
     const exportIcs = () => {
-        const blob = new Blob([planToIcs(plan, { now: new Date(), reminderMinutes: reminder })], { type: "text/calendar;charset=utf-8" });
+        let text: string;
+        try {
+            text = planToIcs(plan, { now: new Date(), reminderMinutes: reminder });
+        } catch {
+            return setExportStatus("failed");
+        }
+        const record = { at: new Date().toISOString(), signature: signatureOf(plan), reminder };
+        writeExport(plan.id, record);
+        setExportStatus(record);
+        const blob = new Blob([text], { type: "text/calendar;charset=utf-8" });
         const url = URL.createObjectURL(blob);
         const link = document.createElement("a");
         link.href = url;
@@ -164,6 +176,20 @@ export function PlanScreen({ planId }: { planId: string }) {
             </div>
 
             {plan.state === "draft" && <DraftPanel plan={plan} />}
+            {plan.state !== "draft" && <RescheduleProposal plan={plan} />}
+            {plan.state !== "draft" && (
+                <div className="flex flex-col gap-1 text-[13px] text-muted" data-testid="export-status">
+                    <p>
+                        <span className="font-semibold text-ink">Calendar file:</span>{" "}
+                        {exportStatus === null && "not created yet."}
+                        {exportStatus === "failed" && "the file could not be created. Try again."}
+                        {exportStatus !== null && exportStatus !== "failed" && exportStatus.signature === signatureOf(plan) && `created on ${exportStatus.at.slice(0, 10)}. A file is only created here; Orari cannot tell whether you added it to your calendar.`}
+                        {exportStatus !== null && exportStatus !== "failed" && exportStatus.signature !== signatureOf(plan) && "out of date: the plan changed after the last file. Download it again. Events keep their identity, so a calendar that supports updates replaces them; otherwise remove the old events yourself."}
+                    </p>
+                    <p>Calendar not connected: whether your other events clash with these sessions cannot be checked or confirmed. Compare them yourself.</p>
+                    {reminder !== null && exportStatus !== null && exportStatus !== "failed" && exportStatus.reminder !== reminder && <p>The reminder choice changed after the last file was created; download it again to include it.</p>}
+                </div>
+            )}
             {plan.state !== "draft" && reminder !== null && (
                 <p className="text-[13px] text-muted">
                     The reminder is written into the file as a calendar alarm. Whether your calendar app shows it is up to that app; Orari cannot check. The file is only created here: nothing is added to your calendar until you open it.
@@ -307,6 +333,7 @@ function DraftPanel({ plan }: { plan: StoredPlan }) {
     const [capacity, setCapacity] = useState(() => readCapacity(window.localStorage));
     const [busy, setBusy] = useState(false);
     const [saveError, setSaveError] = useState<string | null>(null);
+    const [editStatus, setEditStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
     const { violations, warnings } = useMemo(() => validatePlan(plan, capacity), [plan, capacity]);
     const needed = capacityNeeded(plan);
     const onlyCapacity = violations.length > 0 && violations.every((v) => v.code === "DAILY_CAPACITY" || v.code === "WEEKLY_CAPACITY");
@@ -373,6 +400,17 @@ function DraftPanel({ plan }: { plan: StoredPlan }) {
                     This plan fits if you allow up to {Math.ceil((needed.dailyMinutes / 60) * 4) / 4} h a day and {Math.ceil((needed.weeklyMinutes / 60) * 2) / 2} h a week, or if you create it again with a later end date.
                 </p>
             )}
+            <details className="text-sm">
+                <summary className="min-h-11 cursor-pointer font-semibold">Edit a session ({plan.sessions.length})</summary>
+                <ul className="mt-2 flex flex-col gap-3">
+                    {plan.sessions.map((session) => (
+                        <SessionEdit key={session.id} plan={plan} session={session} onStatus={setEditStatus} />
+                    ))}
+                </ul>
+            </details>
+            <p role="status" className="text-[13px] text-muted" data-testid="save-status">
+                {editStatus === "saving" ? "Saving…" : editStatus === "saved" ? "All changes saved on this device." : editStatus === "error" ? "The last change was not saved. Try again." : "Your changes are saved on this device as you make them."}
+            </p>
             {saveError && <p role="alert" className="text-sm font-semibold text-bad">{saveError}</p>}
             <div className="flex flex-wrap gap-2">
                 <Button look="primary" disabled={busy || violations.length > 0} onClick={() => void doPublish()}>
@@ -386,5 +424,69 @@ function DraftPanel({ plan }: { plan: StoredPlan }) {
                 </Button>
             </div>
         </section>
+    );
+}
+
+interface ExportRecord {
+    at: string;
+    signature: string;
+    reminder: number | null;
+}
+const EXPORTS_KEY = "orari.exports";
+function readExport(planId: string): ExportRecord | null {
+    try {
+        const all = JSON.parse(window.localStorage.getItem(EXPORTS_KEY) ?? "{}") as Record<string, ExportRecord>;
+        const r = all[planId];
+        return r && typeof r.at === "string" && typeof r.signature === "string" ? r : null;
+    } catch {
+        return null;
+    }
+}
+function writeExport(planId: string, record: ExportRecord) {
+    try {
+        const all = JSON.parse(window.localStorage.getItem(EXPORTS_KEY) ?? "{}") as Record<string, ExportRecord>;
+        all[planId] = record;
+        window.localStorage.setItem(EXPORTS_KEY, JSON.stringify(all));
+    } catch {
+        /* the status then shows "not created" after a reload, which is the safe side */
+    }
+}
+
+/** One session of a draft: date, times and title, saved on this device a moment after the last keystroke. */
+function SessionEdit({ plan, session, onStatus }: { plan: StoredPlan; session: StoredPlan["sessions"][number]; onStatus: (s: "idle" | "saving" | "saved" | "error") => void }) {
+    const { store } = useServices();
+    const [draft, setDraft] = useState({ title: session.title, date: session.date, startTime: session.startTime, endTime: session.endTime });
+    const timer = useRef<number | undefined>(undefined);
+    const change = (patch: Partial<typeof draft>) => {
+        const next = { ...draft, ...patch };
+        setDraft(next);
+        onStatus("saving");
+        window.clearTimeout(timer.current);
+        timer.current = window.setTimeout(async () => {
+            const valid = next.title.trim() !== "" && /^\d{4}-\d{2}-\d{2}$/.test(next.date) && /^([01]\d|2[0-3]):[0-5]\d$/.test(next.startTime) && /^([01]\d|2[0-3]):[0-5]\d$/.test(next.endTime);
+            if (!valid) return onStatus("idle");
+            const edited = { ...plan, sessions: plan.sessions.map((x) => (x.id === session.id ? { ...x, ...next, title: next.title.trim() } : x)).sort((a, b) => (a.date + a.startTime).localeCompare(b.date + b.startTime)) };
+            onStatus((await store.savePlan(edited)) ? "saved" : "error");
+        }, 700);
+    };
+    return (
+        <li className="grid gap-2 sm:grid-cols-[1fr_auto_auto_auto]">
+            <label className="flex flex-col text-[13px]">
+                Title
+                <input value={draft.title} maxLength={200} onChange={(e) => change({ title: e.target.value })} className="min-h-11 rounded-m border border-control bg-raised px-2 text-sm" />
+            </label>
+            <label className="flex flex-col text-[13px]">
+                Date
+                <input type="date" value={draft.date} onChange={(e) => change({ date: e.target.value })} className="min-h-11 rounded-m border border-control bg-raised px-2 text-sm" />
+            </label>
+            <label className="flex flex-col text-[13px]">
+                From
+                <input type="time" value={draft.startTime} onChange={(e) => change({ startTime: e.target.value })} className="min-h-11 rounded-m border border-control bg-raised px-2 text-sm" />
+            </label>
+            <label className="flex flex-col text-[13px]">
+                Until
+                <input type="time" value={draft.endTime} onChange={(e) => change({ endTime: e.target.value })} className="min-h-11 rounded-m border border-control bg-raised px-2 text-sm" />
+            </label>
+        </li>
     );
 }

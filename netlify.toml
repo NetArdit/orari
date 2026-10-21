@@ -12,7 +12,7 @@
   node_bundler = "esbuild"
 
 [functions."housekeeping"]
-  schedule = "@hourly"
+  schedule = "*/30 5-22 * * *"
 
 # The API. `force` so that no published file can ever answer in its place.
 [[redirects]]

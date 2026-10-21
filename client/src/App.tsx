@@ -10,6 +10,7 @@ import { NewPlanScreen } from "./screens/NewPlanScreen.tsx";
 import { PlanScreen, PlansScreen, SessionScreen } from "./screens/PlansScreens.tsx";
 import { SettingsScreen } from "./screens/SettingsScreen.tsx";
 import { TodayScreen } from "./screens/TodayScreen.tsx";
+import { ReminderSync } from "./screens/Reminders.tsx";
 import { WeekScreen } from "./screens/WeekScreen.tsx";
 import { applyAppearance, parseAppearance, readCachedAppearance, writeCachedAppearance } from "./settings/appearance.ts";
 import type { Appearance } from "./settings/appearance.ts";
@@ -196,6 +197,7 @@ export function App() {
                 )}
                 {services && booted.state === "ready" && (
                     <ServicesContext.Provider value={services}>
+                        <ReminderSync />
                         <Screen route={route} />
                     </ServicesContext.Provider>
                 )}

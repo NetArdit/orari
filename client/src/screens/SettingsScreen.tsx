@@ -2,6 +2,7 @@ import { useServices } from "../app/services.tsx";
 import { LOOKS } from "../settings/appearance.ts";
 import { ScreenTitle } from "../ui/primitives.tsx";
 import { AccountPanel, LogOutButton } from "./AccountScreens.tsx";
+import { RemindersPanel } from "./Reminders.tsx";
 
 function SunIcon() {
     return (
@@ -30,6 +31,8 @@ export function SettingsScreen() {
             <ScreenTitle title="Settings" />
 
             <AccountPanel />
+
+            <RemindersPanel />
 
             <section aria-label="Appearance" className="flex flex-col gap-3">
                 <h2 className="text-lg font-semibold">Appearance</h2>

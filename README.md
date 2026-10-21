@@ -106,3 +106,10 @@ Not covered by any test: a real SMTP provider's delivery and spam handling, Neon
 
 `netlify.toml` publishes the pages from `netlify-dist/`, runs the whole API as one function (`netlify/functions/api.js`), runs the AI work of a plan as a background function (`job-background.js`, up to 15 minutes, answered 202 at once) and retries unsent mail hourly (`housekeeping.js`). Jobs live in the PostgreSQL table `jobs` (`lib/jobsDb.js`), so a poll finds the answer whichever instance serves it. Environment variables are the same as for Render, plus `ORARI_BASE_URL` set to the site's own address. The site must have visitor protection off, or the function cannot call itself.
 Limits that matter at no cost: per-client AI rate limits are counted per warm function instance (weaker than on one server); a cancelled job is marked cancelled but the running AI call is not interrupted; the free Netlify plan counts credits per production deploy.
+
+## Reminders, rescheduling and the weekly review
+
+- **Reminders by push** (Netlify only): the browser tells the server when to remind (`/api/push/sync`), a scheduled function (`housekeeping.js`, every 30 minutes between 05:00 and 22:59 UTC) sends what is due with Web Push (`lib/pushDb.js`). Needs `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT`. Retries after 1, 5 and 30 minutes (3 attempts), dead subscriptions (404/410) are deleted, quiet hours and the daily cap are enforced on the server. The list of due and missed sessions on the Today screen works with push off.
+- **Why every 30 minutes, not every minute:** each run wakes the free Neon database, which counts the hours it is awake (191 a month); a 5-minute cadence would use them all. A reminder is therefore usually delivered within about 30 minutes of its time.
+- **Drafts and publishing**, the validator (`client/src/domain/validate.ts`), placement and rescheduling (`schedule.ts`) and the weekly review (`review.ts`) run in the browser; plans stay on the device.
+- Real-device checks (iOS Home Screen app, Android Chrome, desktop permission states, snooze buttons on a lock screen) cannot be done by tests and are listed in ORARI_PROGRESS.md.

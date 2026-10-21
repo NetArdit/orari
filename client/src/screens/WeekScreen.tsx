@@ -1,3 +1,4 @@
+import { WeeklyReview } from "./Review.tsx";
 import { useState } from "react";
 import { addDays, byTime } from "../domain/clock.ts";
 import { sessionState } from "../domain/progress.ts";
@@ -77,6 +78,8 @@ export function WeekScreen() {
                     );
                 })}
             </div>
+
+            <WeeklyReview plans={state.plans} weekStart={days[0]!} />
         </>
     );
 }

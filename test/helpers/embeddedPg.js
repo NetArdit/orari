@@ -70,8 +70,9 @@ export async function startPostgres() {
         connectionString,
         reset,
         async stop() {
-            await pool.end();
-            await server.stop();
+            await Promise.race([pool.end(), new Promise((r) => setTimeout(r, 5000))]);
+            // On Windows the server's stop can hang after the tests have passed; waiting for it forever fails the file.
+            await Promise.race([server.stop(), new Promise((r) => setTimeout(r, 15000))]);
             // Windows may still hold the directory for a moment; a leftover temp folder is not a test failure.
             try { rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 }); } catch { /* left for the OS temp cleanup */ }
         },

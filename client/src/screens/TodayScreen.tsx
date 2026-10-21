@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { createReplanFlow } from "../state/flows.ts";
 import { durationMinutes } from "../domain/clock.ts";
+import { InAppReminders } from "./Reminders.tsx";
 import { currentPlan, needsReplan, nextSession, progressOf, streakDays, todayAgenda } from "../domain/progress.ts";
 import { useClock, useFlow, useServices, useStoreState } from "../app/services.tsx";
 import { AccountRecovery, Button, buttonClass, Empty, Link, Notice, ScreenTitle, SessionRow } from "../ui/primitives.tsx";
@@ -51,6 +52,8 @@ export function TodayScreen() {
                     </p>
                 )}
             </ScreenTitle>
+
+            <InAppReminders />
 
             {state.saveError && (
                 <Notice look="bad" role="alert" title="The change was not saved on this device">

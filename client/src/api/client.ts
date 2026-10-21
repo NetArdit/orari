@@ -204,7 +204,7 @@ export function createApiClient({
     newKey = () => uuid(),
 }: ApiClientOptions = {}) {
     async function request<T>(
-        method: "GET" | "POST",
+        method: "GET" | "POST" | "PUT",
         path: string,
         body: unknown,
         limitMs: number,
@@ -391,6 +391,17 @@ export function createApiClient({
         },
 
         /** Plan sync; needs a session and a confirmed e-mail address. */
+        /** Reminders by Web Push. Needs an account with a confirmed e-mail; the server answers 404 when push is not set up on it. */
+        push: {
+            config: (options: RequestOptions = {}) => request<{ publicKey: string | null }>("GET", "/api/push/config", undefined, timeoutMs, options),
+            status: (options: RequestOptions = {}) =>
+                request<{ subscriptions: number; counts: Record<string, number>; failed: Array<{ sessionId: string; fireAt: string }> }>("GET", "/api/push/status", undefined, timeoutMs, options),
+            subscribe: (subscription: unknown, options: RequestOptions = {}) => request<{ ok: true }>("POST", "/api/push/subscribe", { subscription }, timeoutMs, options),
+            unsubscribe: (endpoint: string, options: RequestOptions = {}) => request<{ ok: true }>("POST", "/api/push/unsubscribe", { endpoint }, timeoutMs, options),
+            setPrefs: (input: { quietStart: number; quietEnd: number; dailyCap: number; tz: string }, options: RequestOptions = {}) => request<{ ok: true }>("PUT", "/api/push/prefs", input, timeoutMs, options),
+            sync: (reminders: unknown[], activeSessionIds: string[], options: RequestOptions = {}) => request<{ ok: true; planned: number }>("POST", "/api/push/sync", { reminders, activeSessionIds }, timeoutMs, options),
+        },
+
         sync: {
             listPlans: (options: RequestOptions = {}) => request<{ plans: Array<{ id: string } & Record<string, unknown>> }>("GET", "/api/sync/plans", undefined, timeoutMs, options),
             createPlan: (plan: unknown, options: RequestOptions = {}) => request<{ plan: unknown }>("POST", "/api/sync/plans", { plan }, timeoutMs, options),

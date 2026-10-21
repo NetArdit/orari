@@ -31,7 +31,7 @@ async function build() {
     const aiConfigured = Boolean(provider.apiKey);
     const { parseNaturalLanguageRequest, generateStudyPlan } = createAi({ models: provider.models, ...(aiConfigured ? { client: createProviderClient(provider) } : {}) });
     // A function instance is short-lived and several can run at once: a small pool each keeps the database's connection limit safe.
-    const { pool, service, accounts } = await composePostgres(env, { poolSize: 3 });
+    const { pool, service, accounts, push } = await composePostgres(env, { poolSize: 3 });
 
     const base = env.ORARI_BASE_URL.replace(/\/$/, "");
     const jobBackend = createDbJobStore({
@@ -46,7 +46,7 @@ async function build() {
             if (res.status !== 202 && !res.ok) throw new Error("dispatch refused: " + res.status);
         },
     });
-    const app = createApp({ aiConfigured, parseNaturalLanguageRequest, generateStudyPlan, accounts, jobBackend, rateLimit: { windowMs: 10 * 60 * 1000, limit: 30 } });
+    const app = createApp({ aiConfigured, parseNaturalLanguageRequest, generateStudyPlan, accounts, jobBackend, push, rateLimit: { windowMs: 10 * 60 * 1000, limit: 30 } });
     app.set("trust proxy", 1);
-    return { app, service, jobBackend };
+    return { app, service, jobBackend, push };
 }
